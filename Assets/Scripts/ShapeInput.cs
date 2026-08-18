@@ -1,0 +1,222 @@
+using System.Collections;
+using System.Collections.Generic;
+using Block_Blast.Scripts;
+using UnityEngine;
+using UnityEngine.InputSystem;
+
+public class ShapeInput : MonoBehaviour
+{
+    [SerializeField] private LayerMask gridMask;
+    [SerializeField] private LayerMask shapeMask;
+    [SerializeField] private GridBoard gridBoard;
+    [SerializeField] private ShapePool shapePool;
+    private Shape selectedShape;
+    private Vector3 offset;
+    private bool isDragging;
+    
+    private void Update()
+    {
+        if (Pointer.current == null)
+            return;
+
+        if (Pointer.current.press.wasPressedThisFrame)
+        {
+            SelectShape();
+        }
+
+        if (Pointer.current.press.isPressed && isDragging)
+        {
+            DragShape();
+        }
+
+        if (Pointer.current.press.wasReleasedThisFrame)
+        {
+            ReleaseShape();
+        }
+    }
+
+    private Vector3 GetWorldPosition()
+    {
+        Vector2 screenPosition = Pointer.current.position.ReadValue();
+        Vector3 worldPosition = Camera.main.ScreenToWorldPoint(screenPosition);
+        worldPosition.z = 0f;
+
+        return worldPosition;
+    }
+
+    // private void CheckGrid()
+    // {
+    //     Vector3 worldPosition = GetWorldPosition();
+    //     
+    //     Collider2D hit = Physics2D.OverlapPoint(worldPosition, gridMask);
+    //
+    //     if (hit == null)
+    //     {
+    //         return;
+    //     }
+    //     
+    //     ShapeSquare square = hit.GetComponent<ShapeSquare>();
+    //
+    //     if (square != null)
+    //     {
+    //         Debug.Log(square.name);
+    //     }
+    // }
+    //
+    // private void CheckShapeOnGrid()
+    // {
+    //     if (selectedShape == null) return;
+    //
+    //     List<ShapeSquare> shapeSquares = selectedShape.GetActiveSquares();
+    //
+    //     foreach (ShapeSquare square in shapeSquares)
+    //     {
+    //         Vector3 worldPosition = GetWorldPosition();
+    //
+    //         Collider2D hit = Physics2D.OverlapPoint(worldPosition, gridMask);
+    //
+    //         if (hit == null)
+    //         {
+    //             return;
+    //         }
+    //
+    //         ShapeSquare gridSquare = hit.GetComponent<ShapeSquare>();
+    //
+    //         if (gridSquare != null)
+    //         {
+    //                 Debug.Log("Square " + square.name + "->" + gridSquare.name);
+    //         }
+    //     }
+    // }
+
+    bool CanPlaceShape()
+    {
+        if(selectedShape == null) return false;
+        
+        List<ShapeSquare> shapeSquares = selectedShape.GetActiveSquares();
+
+        foreach (ShapeSquare square in shapeSquares)
+        {
+            if (!gridBoard.GetGridSquare(square.transform.position, out ShapeSquare gridSquare))
+            {
+                return false;
+            }
+
+            if (gridSquare.IsOccupied)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    Vector3 GetSnapPosition(Shape shape)
+    {
+        List<ShapeSquare> shapeSquares = shape.GetActiveSquares();
+
+        if (shapeSquares.Count == 0)
+        {
+            return shape.transform.position;
+        }
+        
+        ShapeSquare firstSquare = shapeSquares[0];
+        
+        Vector3 firstSquarePosition = firstSquare.transform.position;
+        
+        Vector3 offset = shape.transform.position - firstSquarePosition;
+        
+        Vector3 gridPosition = gridBoard.GetGridSquarePosition(firstSquarePosition);
+        
+        return gridPosition +  offset;
+    }
+
+    private IEnumerator PlaceShape(Shape shape)
+    {
+        Vector3 snapPosition = GetSnapPosition(shape);
+        
+        shape.SnapToPosition(snapPosition);
+        
+        List<ShapeSquare> shapeSquares = shape.GetActiveSquares();
+
+        foreach (ShapeSquare square in shapeSquares)
+        {
+            if (gridBoard.GetGridSquare(square.transform.position, out ShapeSquare gridSquare))
+            {
+                gridSquare.CopyFrom(square);
+            }
+        }
+        
+        List<ShapeSquare> completeSquares = gridBoard.GetCompleteRowOrColumn();
+        
+
+        if (completeSquares.Count > 0)
+        {
+           yield return StartCoroutine(gridBoard.ClearCompletedRowOrColumn(completeSquares));
+        }
+        
+        Destroy(shape.gameObject);
+        
+        shapePool.ShapePlaced();
+        
+    }
+    
+
+    #region Input Selection
+    private void SelectShape()
+    {
+        Vector3 worldPosition = GetWorldPosition();
+
+        Collider2D hit =  Physics2D.OverlapPoint(worldPosition,shapeMask);
+
+        if (hit == null)
+            return;
+
+        ShapeSquare square = hit.GetComponent<ShapeSquare>();
+
+        if (square == null)
+            return;
+
+        selectedShape = square.GetComponentInParent<Shape>();
+
+        if (selectedShape == null)
+            return;
+
+        selectedShape.SelectedSquare();
+        selectedShape.AddToOrderForAllSquares(100);
+        offset = selectedShape.transform.position - worldPosition;
+        isDragging = true;
+    }
+
+    private void DragShape()
+    {
+        Vector3 worldPosition = GetWorldPosition();
+        selectedShape.transform.position = worldPosition + offset;
+        
+        bool canPlace  = CanPlaceShape();
+    }
+
+    private void ReleaseShape()
+    {
+        if (selectedShape == null)
+            return;
+        
+        bool canPlace = CanPlaceShape();
+
+        if (canPlace)
+        {
+            Shape shapeToPlace = selectedShape;
+            StartCoroutine(PlaceShape(shapeToPlace));
+        }
+        else
+        {
+            selectedShape.AddToOrderForAllSquares(-100);
+            selectedShape.UnSelectedSquare();
+        }
+
+        isDragging = false;
+        selectedShape = null;
+    }
+    
+    #endregion
+}

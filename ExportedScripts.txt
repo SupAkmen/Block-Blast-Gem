@@ -1,0 +1,1065 @@
+﻿========================================
+UNITY SCRIPT EXPORT
+========================================
+Tổng số file quét được: 8
+
+########################################
+FILE: Assets/Scripts/ColorPallete.cs
+########################################
+
+using UnityEngine;
+
+[CreateAssetMenu(fileName = "ColorPallete", menuName = "Scriptable Objects/ColorPallete")]
+public class ColorPallete : ScriptableObject
+{
+    public Color underlayColor =  Color.white;
+    public Color topColor = Color.white;
+    public Color bottomColor = Color.white;
+    public Color leftColor = Color.white;
+    public Color rightColor = Color.white;
+    public Color overlayColor = Color.white;
+    public Color bonusColor = Color.white;
+}
+
+
+
+########################################
+FILE: Assets/Scripts/GridBoard.cs
+########################################
+
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.Serialization;
+
+public class GridBoard : MonoBehaviour
+{
+    [FormerlySerializedAs("colums")] [SerializeField] private int columns = 8;
+    [SerializeField] private int rows = 8; 
+    [SerializeField] ShapeSquare shapeSquarePrefab;
+    [SerializeField] Transform startPosition;
+    [SerializeField] float _offset = 0.0001f;
+    
+    private ShapeSquare[,] gridSquares;
+
+    private void Awake()
+    {
+        GenerateGrid();
+    }
+
+    public void GenerateGrid()
+    {
+        gridSquares = new ShapeSquare[rows, columns];
+        
+        float xSquareSize = shapeSquarePrefab.underlaySprite.GetComponent<Renderer>().bounds.size.x;
+        float ySquareSize = shapeSquarePrefab.underlaySprite.GetComponent<Renderer>().bounds.size.y;
+        
+        for (int row = 0; row < rows; row++)
+        {
+            for (int column = 0; column < columns; column++)
+            {
+                ShapeSquare shapeSquare = Instantiate(shapeSquarePrefab,startPosition.position + new Vector3(row * (xSquareSize + _offset) ,column * (ySquareSize + _offset) , 0f ) , Quaternion.identity,this.transform);
+                shapeSquare.name = "Square "+row+","+column;
+                shapeSquare.IsOccupied = false;
+                gridSquares[row, column] = shapeSquare;
+            }
+        }
+    }
+    
+    public bool GetGridSquare(Vector3 worldPosition, out ShapeSquare gridSquare)
+    {
+        gridSquare = null;
+        
+        Vector3 localPosition = worldPosition - startPosition.position;
+        
+        float xSquareSize = shapeSquarePrefab.underlaySprite.GetComponent<Renderer>().bounds.size.x;
+        float ySquareSize = shapeSquarePrefab.underlaySprite.GetComponent<Renderer>().bounds.size.y;
+        
+        int row = Mathf.RoundToInt(localPosition.x / xSquareSize + _offset);
+        int column = Mathf.RoundToInt(localPosition.y/ySquareSize + _offset);
+
+        if (row < 0 || row >= rows || column < 0 || column >= columns)
+            return false;
+        
+        gridSquare = gridSquares[row, column];
+        
+        return gridSquare != null;
+    }
+
+    
+    public Vector3 GetGridSquarePosition(Vector3 worldPosition)
+    {
+        Vector3 localPosition = worldPosition - startPosition.position;
+        
+        float xSquareSize = shapeSquarePrefab.underlaySprite.GetComponent<Renderer>().bounds.size.x;
+        float ySquareSize = shapeSquarePrefab.underlaySprite.GetComponent<Renderer>().bounds.size.y;
+        
+        int row = Mathf.RoundToInt(localPosition.x/(xSquareSize + _offset));
+        int column = Mathf.RoundToInt((localPosition.y / (ySquareSize + _offset)));
+
+        if (row < 0 || row >= rows || column < 0 || column >= columns)
+            return worldPosition;
+        
+        return gridSquares[row, column].transform.position;
+    }
+
+    public List<ShapeSquare> GetCompleteRowOrColumn()
+    {
+        List<ShapeSquare> completeSquare = new List<ShapeSquare>();
+        bool isFull;
+
+        for (int r = 0; r < rows; r++)
+        {
+            isFull = true;
+            for (int c = 0; c < columns; c++)
+            {
+                if (!gridSquares[r, c].IsOccupied)
+                {
+                    isFull = false;
+                    break;
+                }
+            }
+            if (isFull)
+            {
+                for (int c = 0; c < columns; c++)
+                {
+                    completeSquare.Add(gridSquares[r, c]);
+                }
+            }
+        }
+
+        for (int c = 0; c < columns; c++)
+        {
+            isFull = true;
+            for (int r = 0; r < rows; r++)
+            {
+                if (!gridSquares[r, c].IsOccupied)
+                {
+                    isFull = false;
+                    break;
+                }
+            }
+            if (isFull)
+            {
+                for (int r = 0; r < rows; r++)
+                {
+                    if (!completeSquare.Contains(gridSquares[r, c]))
+                    {
+                        completeSquare.Add(gridSquares[r, c]);
+                    }
+                }
+            }
+        }
+        
+        return completeSquare;
+    }
+
+    public bool CanPlaceShapes(ShapeData shapeData)
+    {
+        int shapeRows = shapeData.rows;
+        int shapeColumns = shapeData.columns;
+        
+        bool[,] shapeGrid = new bool[shapeRows, shapeColumns];
+        for (int r = 0; r < shapeRows; r++)
+        {
+            for (int c = 0; c < shapeColumns; c++)
+            {
+                shapeGrid[r, c] = shapeData.shapeBoard[r].colums[c];
+            }
+        }
+        
+        int minR = shapeRows, maxR = -1, minC = shapeColumns, maxC = -1;
+
+        for (int r = 0; r < shapeRows; r++)
+        {
+            for (int c = 0; c < shapeColumns; c++)
+            {
+                if (shapeGrid[r, c])
+                {
+                    if(r < minR) minR = r;
+                    if(r > maxR) maxR = r;
+                    if(c < minC) minC = c;
+                    if(c > maxC) maxC = c;
+                }
+            }
+        }
+
+        if (maxR == -1) return false; // shape empty
+
+        int shapeHeight = maxR - minR + 1;
+        int shapeWidth = maxC - minC + 1;
+
+        for (int startR = 0; startR <= rows - shapeHeight; startR++)
+        {
+            for (int startC = 0; startC <= columns - shapeWidth; startC++)
+            {
+                bool canPlace = true;
+
+                for (int r = minR; r <= maxR; r++)
+                {
+                    for (int c = minC; c <= maxC; c++)
+                    {
+                        if (shapeGrid[r, c])
+                        {
+                            int gridR = startR + (r - minR);
+                            int gridC = startC + (c - minC);
+
+                            if (gridSquares[gridR, gridC].IsOccupied)
+                            {
+                                canPlace = false;
+                                break;
+                            }
+                        }
+                    }
+                    
+                    if(!canPlace) break;
+                }
+
+                if (canPlace) return true;
+            }
+        }
+        
+        return false;
+    }
+
+    public IEnumerator ClearCompletedRowOrColumn(List<ShapeSquare> completeSquare)
+    {
+        if(completeSquare == null || completeSquare.Count == 0)
+            yield break;
+
+        foreach (ShapeSquare gridSquare in completeSquare)
+        {
+            StartCoroutine((gridSquare.ClearAnimation()));
+        }
+        yield return new WaitForSeconds(0.15f);
+
+        foreach (ShapeSquare gridSquare in completeSquare)
+        {
+            gridSquare.ResetToEmpty();
+        }
+    }
+}
+
+
+
+########################################
+FILE: Assets/Scripts/Shape.cs
+########################################
+
+using System;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class Shape : MonoBehaviour
+{
+     [SerializeField] ShapeData currentShapeData;
+     [SerializeField] ShapeSquare shapeSquarePrefab;
+     [SerializeField] private Transform startPosition;
+     [SerializeField] private float _offset = 0.01f;
+     
+     [SerializeField] public float startScale = 0.7f;
+     [SerializeField] public float selectedScale = 1;
+     
+     private Vector3 initialPosition;
+     private void Start()
+     {
+          transform.localScale = new Vector3(startScale, startScale, startScale);
+          initialPosition = transform.position;
+     }
+
+     public void CreateGridShape()
+     {
+          int row = currentShapeData.rows;
+          int column = currentShapeData.columns;
+
+          float xSquareSize = shapeSquarePrefab.underlaySprite.GetComponent<Renderer>().bounds.size.x;
+          float ySquareSize = shapeSquarePrefab.underlaySprite.GetComponent<Renderer>().bounds.size.y;
+          
+          float totalHeight = (row - 1) * (xSquareSize + _offset);
+          float totalWidth = (column - 1) * (xSquareSize + _offset);
+          Vector3 centerOffset  = new Vector3(-totalWidth/2f,-totalHeight/2f,0);
+        
+          for (int r = 0; r < row; r++)
+          {
+               for (int c = 0; c < column; c++)
+               {
+                    if (currentShapeData.shapeBoard[r].colums[c] == true)
+                    {
+                         Vector3 pos = startPosition.position + centerOffset + new Vector3(r * (xSquareSize + _offset), c * (ySquareSize + _offset), 0f);
+                         ShapeSquare shapeSquare = Instantiate(shapeSquarePrefab, pos , Quaternion.identity,this.transform);
+                         shapeSquare.IsActive = true;
+                         shapeSquare.name = "Square "+r+","+c;
+                    }
+               }
+          }
+     }
+
+     public void SetShapeData(ShapeData shapeData)
+     {
+          currentShapeData = shapeData;
+          CreateGridShape();
+          
+          ApplyPalleteToAllSquares((currentShapeData.colorPallete));
+          
+          transform.localScale = new Vector3(startScale, startScale, startScale);
+          initialPosition = transform.position;
+     }
+
+     public void ApplyPalleteToAllSquares(ColorPallete pallete)
+     {
+          foreach (Transform child in transform)
+          {
+               ShapeSquare shape = child.GetComponent<ShapeSquare>();
+
+               if (shape != null)
+               {
+                    shape.ApplyPallete(pallete);
+               }
+               
+          }
+     }
+
+     public List<ShapeSquare> GetActiveSquares()
+     {
+          List<ShapeSquare> squares = new List<ShapeSquare>();
+
+          foreach ( Transform child in transform )
+          {
+               ShapeSquare shapeSquare = child.GetComponent<ShapeSquare>();
+
+               if (shapeSquare != null && shapeSquare.IsActive)
+               {
+                    squares.Add(shapeSquare);
+               }
+          }
+          return squares;
+     }
+
+     public void AddToOrderForAllSquares(int offset)
+     {
+          foreach (Transform child in transform)
+          {
+               ShapeSquare shapeSquare = child.GetComponent<ShapeSquare>();
+               
+               if(shapeSquare != null)
+                    shapeSquare.AddToOrderInLayer(offset);
+          }
+     }
+
+     public void SelectedSquare()
+     {
+          transform.localScale = new Vector3(selectedScale, selectedScale, selectedScale);
+     }
+
+     public void UnSelectedSquare()
+     {
+          transform.localScale = new Vector3(startScale, startScale, startScale);
+          transform.position = initialPosition;
+     }
+
+     public void SnapToPosition(Vector3 position)
+     {
+          transform.position = position;
+     }
+}
+
+
+
+########################################
+FILE: Assets/Scripts/ShapeData.cs
+########################################
+
+using UnityEngine;
+
+[CreateAssetMenu(fileName = "ShapeData", menuName = "Scriptable Objects/ShapeData")]
+public class ShapeData : ScriptableObject
+{
+    [System.Serializable]
+    public class Row
+    {
+        public bool[] colums;
+
+        public int size;
+
+        public Row(int size)
+        {
+            CreateRow(size);
+        }
+        
+        public void CreateRow (int size)
+        {
+            this.size = size;
+            colums = new bool[size];
+            ClearRow();
+        }
+
+        public void ClearRow()
+        {
+            for (int i = 0; i < size; i++)
+            {
+                colums[i] = false;
+            }
+        }
+    }
+
+    public int rows;
+    public int columns;
+    public Row[] shapeBoard;
+    
+    public ColorPallete colorPallete;
+
+    public void CreateBoard()
+    {
+        shapeBoard = new Row[rows];
+
+        for (int i = 0; i < rows; i++)
+        {
+            shapeBoard[i] = new Row(columns);
+        }
+    }
+
+    public void ClearRow()
+    {
+        for(int i = 0; i < rows; i++)
+        {
+            shapeBoard[i].ClearRow();
+        }
+    }
+}
+
+
+
+########################################
+FILE: Assets/Scripts/ShapeInput.cs
+########################################
+
+using System.Collections;
+using System.Collections.Generic;
+using Block_Blast.Scripts;
+using UnityEngine;
+using UnityEngine.InputSystem;
+
+public class ShapeInput : MonoBehaviour
+{
+    [SerializeField] private LayerMask gridMask;
+    [SerializeField] private LayerMask shapeMask;
+    [SerializeField] private GridBoard gridBoard;
+    [SerializeField] private ShapePool shapePool;
+    private Shape selectedShape;
+    private Vector3 offset;
+    private bool isDragging;
+    
+    private void Update()
+    {
+        if (Pointer.current == null)
+            return;
+
+        if (Pointer.current.press.wasPressedThisFrame)
+        {
+            SelectShape();
+        }
+
+        if (Pointer.current.press.isPressed && isDragging)
+        {
+            DragShape();
+        }
+
+        if (Pointer.current.press.wasReleasedThisFrame)
+        {
+            ReleaseShape();
+        }
+    }
+
+    private Vector3 GetWorldPosition()
+    {
+        Vector2 screenPosition = Pointer.current.position.ReadValue();
+        Vector3 worldPosition = Camera.main.ScreenToWorldPoint(screenPosition);
+        worldPosition.z = 0f;
+
+        return worldPosition;
+    }
+
+    private void CheckGrid()
+    {
+        Vector3 worldPosition = GetWorldPosition();
+        
+        Collider2D hit = Physics2D.OverlapPoint(worldPosition, gridMask);
+
+        if (hit == null)
+        {
+            return;
+        }
+        
+        ShapeSquare square = hit.GetComponent<ShapeSquare>();
+
+        if (square != null)
+        {
+            Debug.Log(square.name);
+        }
+    }
+
+    private void CheckShapeOnGrid()
+    {
+        if (selectedShape == null) return;
+
+        List<ShapeSquare> shapeSquares = selectedShape.GetActiveSquares();
+
+        foreach (ShapeSquare square in shapeSquares)
+        {
+            Vector3 worldPosition = GetWorldPosition();
+
+            Collider2D hit = Physics2D.OverlapPoint(worldPosition, gridMask);
+
+            if (hit == null)
+            {
+                return;
+            }
+
+            ShapeSquare gridSquare = hit.GetComponent<ShapeSquare>();
+
+            if (gridSquare != null)
+            {
+                    Debug.Log("Square " + square.name + "->" + gridSquare.name);
+            }
+        }
+
+    }
+
+    bool CanPlaceShape()
+    {
+        if(selectedShape == null) return false;
+        
+        List<ShapeSquare> shapeSquares = selectedShape.GetActiveSquares();
+
+        foreach (ShapeSquare square in shapeSquares)
+        {
+            if (!gridBoard.GetGridSquare(square.transform.position, out ShapeSquare gridSquare))
+            {
+                return false;
+            }
+
+            if (gridSquare.IsOccupied)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    Vector3 GetSnapPosition(Shape shape)
+    {
+        List<ShapeSquare> shapeSquares = shape.GetActiveSquares();
+
+        if (shapeSquares.Count == 0)
+        {
+            return shape.transform.position;
+        }
+        
+        ShapeSquare firstSquare = shapeSquares[0];
+        
+        Vector3 firstSquarePosition = firstSquare.transform.position;
+        
+        Vector3 offset = shape.transform.position - firstSquarePosition;
+        
+        Vector3 gridPosition = gridBoard.GetGridSquarePosition(firstSquarePosition);
+        
+        return gridPosition +  offset;
+    }
+
+    private IEnumerator PlaceShape(Shape shape)
+    {
+        Vector3 snapPosition = GetSnapPosition(shape);
+        
+        shape.SnapToPosition(snapPosition);
+        
+        List<ShapeSquare> shapeSquares = shape.GetActiveSquares();
+
+        foreach (ShapeSquare square in shapeSquares)
+        {
+            if (gridBoard.GetGridSquare(square.transform.position, out ShapeSquare gridSquare))
+            {
+                gridSquare.CopyFrom(square);
+            }
+        }
+        
+        List<ShapeSquare> completeSquares = gridBoard.GetCompleteRowOrColumn();
+        
+
+        if (completeSquares.Count > 0)
+        {
+           yield return StartCoroutine(gridBoard.ClearCompletedRowOrColumn(completeSquares));
+        }
+        
+        Destroy(shape.gameObject);
+        
+        shapePool.ShapePlaced();
+        
+    }
+    
+
+    #region Input Selection
+    private void SelectShape()
+    {
+        Vector3 worldPosition = GetWorldPosition();
+
+        Collider2D hit =  Physics2D.OverlapPoint(worldPosition,shapeMask);
+
+        if (hit == null)
+            return;
+
+        ShapeSquare square = hit.GetComponent<ShapeSquare>();
+
+        if (square == null)
+            return;
+
+        selectedShape = square.GetComponentInParent<Shape>();
+
+        if (selectedShape == null)
+            return;
+
+        selectedShape.SelectedSquare();
+        selectedShape.AddToOrderForAllSquares(100);
+        offset = selectedShape.transform.position - worldPosition;
+        isDragging = true;
+    }
+
+    private void DragShape()
+    {
+        Vector3 worldPosition = GetWorldPosition();
+        selectedShape.transform.position = worldPosition + offset;
+        
+        bool canPlace  = CanPlaceShape();
+    }
+
+    private void ReleaseShape()
+    {
+        if (selectedShape == null)
+            return;
+        
+        bool canPlace = CanPlaceShape();
+
+        if (canPlace)
+        {
+            Shape shapeToPlace = selectedShape;
+            StartCoroutine(PlaceShape(shapeToPlace));
+        }
+        else
+        {
+            selectedShape.AddToOrderForAllSquares(-100);
+            selectedShape.UnSelectedSquare();
+        }
+
+        isDragging = false;
+        selectedShape = null;
+    }
+    
+    #endregion
+}
+
+
+
+########################################
+FILE: Assets/Scripts/ShapePool.cs
+########################################
+
+using System;
+using UnityEngine;
+using System.Collections.Generic;
+
+
+namespace Block_Blast.Scripts
+{
+    public class ShapePool : MonoBehaviour
+    {
+        [SerializeField] private Shape shapePrerfab;
+        [SerializeField] private List<ShapeData> shapeData =  new List<ShapeData>();
+        [SerializeField] private Transform[] spawnPositions;
+
+        [SerializeField] private List<ColorPallete> colorPalletes;
+        [SerializeField] private GridBoard gridBoard;
+        
+        private int placedShapeCount;
+        
+        private void Start()
+        {
+            Debug.Log("ShapePool Start() được gọi");
+            Debug.Log($"shapeData count: {shapeData?.Count}");
+            Debug.Log($"spawnPositions length: {spawnPositions?.Length}");
+            Debug.Log($"gridBoard null? {gridBoard == null}");
+            Debug.Log($"shapePrerfab null? {shapePrerfab == null}");
+
+            GenerateShape();
+        }
+        
+        void GenerateShape()
+        {
+            placedShapeCount = 0;
+            int maxAttemps = 100;
+
+            for (int i = 0; i < spawnPositions.Length; i++)
+            {
+                ShapeData selectedData = null;
+                int attempts = 0;
+
+                while (attempts < maxAttemps && selectedData == null)
+                {
+                    ShapeData randomData = shapeData[UnityEngine.Random.Range(0, shapeData.Count)];
+
+                    if (gridBoard.CanPlaceShapes(randomData))
+                    {
+                        selectedData = randomData;
+                        break;
+                    }
+                    
+                    attempts++;
+                }
+
+               
+                if (selectedData == null)
+                {
+                    Debug.Log("No shape found");
+                    continue;
+                }
+                
+                
+                Shape shape = Instantiate(shapePrerfab, spawnPositions[i].position, Quaternion.identity,spawnPositions[i]);
+                shape.SetShapeData(selectedData);
+
+                ColorPallete randomPallete = null;
+
+                if (colorPalletes != null && colorPalletes.Count > 0)
+                {
+                    randomPallete = colorPalletes[UnityEngine.Random.Range(0, colorPalletes.Count)];
+                }
+
+                if (randomPallete != null)
+                {
+                    shape.ApplyPalleteToAllSquares(randomPallete);
+                }
+            }
+            
+            Debug.Log("Generate 3 shapes");
+        }
+
+        public void ShapePlaced()
+        {
+            placedShapeCount++;
+            
+            Debug.Log("Shape Placed" + placedShapeCount);
+
+            if (placedShapeCount >= spawnPositions.Length)
+            {
+                GenerateShape();
+            }
+        }
+    }
+}
+
+
+########################################
+FILE: Assets/Scripts/ShapeSquare.cs
+########################################
+
+using System;
+using System.Collections;
+using NUnit.Framework;
+using UnityEngine;
+
+public class ShapeSquare : MonoBehaviour
+{
+    [SerializeField] public  GameObject underlaySprite;
+    [SerializeField] private GameObject topSprite;
+    [SerializeField] private GameObject bottomSprite;
+    [SerializeField] private GameObject leftSprite;
+    [SerializeField] private GameObject rightSprite;
+    [SerializeField] private GameObject overlaySprite;
+    [SerializeField] private GameObject bonusSprite;
+    
+    private BoxCollider2D boxCollider2D;
+    public bool IsActive;
+    
+    // GridSquare dang bi chiem
+    public bool IsOccupied { get; set; }
+    
+    private Shape shape;
+    
+    private void Awake()
+    {
+        boxCollider2D = GetComponent<BoxCollider2D>();
+        shape = GetComponentInParent<Shape>();
+    }
+
+    private void Start()
+    {
+        if (!IsActive)
+        {
+            SetBlockVisual(false,false,false,false,false,false);
+        }
+        else if(IsActive)
+        {
+            SetBlockVisual(true,true,true,true,true,false);
+        }
+    }
+    
+    
+    public void CopyVisualTo(ShapeSquare target)
+    {
+        target.SetBlockVisual(
+            topSprite.activeSelf,
+            bottomSprite.activeSelf,
+            leftSprite.activeSelf,
+            rightSprite.activeSelf,
+            overlaySprite.activeSelf,
+            bonusSprite.activeSelf
+            );
+    }
+
+    public void CopyFrom(ShapeSquare source)
+    {
+        IsOccupied = true;
+        
+        SetBlockVisual(
+            source.topSprite.activeSelf,
+            source.bottomSprite.activeSelf,
+            source.leftSprite.activeSelf,
+            source.rightSprite.activeSelf,
+            source.overlaySprite.activeSelf,
+            source.bonusSprite.activeSelf
+            );
+        
+        CopyColorFrom(source);
+    }
+
+    public void SetBlockVisual(bool top, bool bottom, bool left, bool right, bool overlay, bool bonus)
+    {
+        underlaySprite.SetActive(true);
+        
+        topSprite.SetActive(top);
+        bottomSprite.SetActive(bottom);
+        leftSprite.SetActive(left);
+        rightSprite.SetActive(right);
+        overlaySprite.SetActive(overlay);
+        bonusSprite.SetActive(bonus);
+    }
+
+    public void ApplyPallete(ColorPallete pallete)
+    {
+        if (pallete == null) return;
+        
+        SetSpriteColor(underlaySprite,pallete.underlayColor);
+        SetSpriteColor(topSprite,pallete.topColor);
+        SetSpriteColor(bottomSprite,pallete.bottomColor);
+        SetSpriteColor(leftSprite,pallete.leftColor);
+        SetSpriteColor(rightSprite,pallete.rightColor);
+        SetSpriteColor(overlaySprite,pallete.overlayColor);
+        SetSpriteColor(bonusSprite,pallete.bonusColor);
+        
+    }
+
+    private void SetSpriteColor(GameObject obj, Color color)
+    {
+        if (obj == null) return;
+        
+        SpriteRenderer sr = obj.GetComponent<SpriteRenderer>();
+        
+        if(sr != null) sr.color = color;
+    }
+
+    public void CopyColorFrom(ShapeSquare source)
+    {
+        CopySpriteColor(source.underlaySprite,underlaySprite);
+        CopySpriteColor(source.topSprite,topSprite);
+        CopySpriteColor(source.bottomSprite,bottomSprite);
+        CopySpriteColor(source.leftSprite,leftSprite);
+        CopySpriteColor(source.rightSprite,rightSprite);
+        CopySpriteColor(source.overlaySprite,overlaySprite);
+        CopySpriteColor(source.bonusSprite,bonusSprite);
+    }
+
+    private void CopySpriteColor(GameObject from, GameObject to)
+    {
+        SpriteRenderer fromSr = from.GetComponent<SpriteRenderer>();
+        SpriteRenderer toSr = to.GetComponent<SpriteRenderer>();
+        
+        toSr.color = fromSr.color;
+    }
+
+    public void AddToOrderInLayer(int offset)
+    {
+        AddOrderToSprite(underlaySprite,offset);
+        AddOrderToSprite(topSprite,offset);
+        AddOrderToSprite(bottomSprite,offset);
+        AddOrderToSprite(leftSprite,offset);
+        AddOrderToSprite(rightSprite,offset);
+        AddOrderToSprite(overlaySprite,offset);
+        AddOrderToSprite(bonusSprite,offset);
+    }
+
+    private void AddOrderToSprite(GameObject obj, int offset)
+    {
+        if (obj == null) return;
+        
+        SpriteRenderer sr = obj.GetComponent<SpriteRenderer>();
+
+        if (sr != null)
+        {
+            sr.sortingOrder += offset;
+        }
+    }
+
+    public void ResetToEmpty()
+    {
+        IsOccupied = false;
+        SetBlockVisual(false,false,false,false,false,false);
+        underlaySprite.SetActive(true);
+        transform.localScale = new Vector3(0.35f, 0.35f, 0.35f);
+        
+        SetSpriteColor(underlaySprite,new Color(0.1927732f,0.3675f,0.7169812f,1f));
+        SetSpriteColor(topSprite,Color.white);
+        SetSpriteColor(bottomSprite,Color.white);
+        SetSpriteColor(leftSprite,Color.white);
+        SetSpriteColor(rightSprite,Color.white);
+        SetSpriteColor(overlaySprite,Color.white);
+        SetSpriteColor(bonusSprite,Color.white);
+    }
+
+    public IEnumerator ClearAnimation()
+    {
+        Vector3 startScale = transform.localScale;
+
+        float duration = 0.15f;
+        float time = 0f;
+
+        while (time < duration)
+        {
+            time += Time.deltaTime;
+            
+            float t = time / duration;
+            
+            transform.localScale = Vector3.Lerp(startScale, Vector3.zero, t);
+            yield return null;
+        }
+        
+        transform.localScale = Vector3.zero;
+    }
+    
+}
+
+
+
+########################################
+FILE: Assets/Editor/ExportScriptTool.cs
+########################################
+
+using System.IO;
+using System.Text;
+using System.Collections.Generic;
+using UnityEditor;
+using UnityEngine;
+
+public class ExportScriptTool : EditorWindow
+{
+    // Chuyển thành List để chứa nhiều đường dẫn thư mục cùng lúc
+    [SerializeField]
+    private List<string> targetFolders = new List<string> { "Assets/Scripts", "Assets/Editor" };
+    private string outputFile = "ExportedScripts.txt";
+
+    private SerializedObject serializedWindow;
+    private SerializedProperty foldersProperty;
+
+    [MenuItem("Tools/Export Scripts To Text")]
+    static void Open()
+    {
+        var window = GetWindow<ExportScriptTool>("Export Scripts");
+        window.minSize = new Vector2(400, 300);
+    }
+
+    private void OnEnable()
+    {
+        serializedWindow = new SerializedObject(this);
+        foldersProperty = serializedWindow.FindProperty(nameof(targetFolders));
+    }
+
+    private void OnGUI()
+    {
+        serializedWindow.Update();
+
+        GUILayout.Label("Export All C# Scripts", EditorStyles.boldLabel);
+        EditorGUILayout.Space(5);
+
+        // Hiển thị danh sách thư mục (có thể nhấn dấu + hoặc - để thêm bớt trực tiếp trên UI)
+        EditorGUILayout.PropertyField(foldersProperty, new GUIContent("Target Folders"), true);
+        serializedWindow.ApplyModifiedProperties();
+
+        EditorGUILayout.Space(5);
+        outputFile = EditorGUILayout.TextField("Output File Name", outputFile);
+
+        GUILayout.Space(15);
+
+        if (GUILayout.Button("Export All", GUILayout.Height(30)))
+        {
+            ExportScripts();
+        }
+    }
+
+    void ExportScripts()
+    {
+        List<string> allFiles = new List<string>();
+
+        // Quét qua toàn bộ danh sách thư mục được cấu hình
+        foreach (string folder in targetFolders)
+        {
+            if (string.IsNullOrEmpty(folder)) continue;
+
+            if (!Directory.Exists(folder))
+            {
+                Debug.LogWarning($"Thư mục không tồn tại (Bỏ qua): {folder}");
+                continue;
+            }
+
+            // Lấy tất cả file .cs trong thư mục hiện tại và các thư mục con của nó
+            string[] filesInFolder = Directory.GetFiles(folder, "*.cs", SearchOption.AllDirectories);
+            allFiles.AddRange(filesInFolder);
+        }
+
+        if (allFiles.Count == 0)
+        {
+            Debug.LogError("Không tìm thấy file .cs nào trong các thư mục đã chỉ định!");
+            return;
+        }
+
+        StringBuilder sb = new StringBuilder();
+
+        sb.AppendLine("========================================");
+        sb.AppendLine("UNITY SCRIPT EXPORT");
+        sb.AppendLine("========================================");
+        sb.AppendLine($"Tổng số file quét được: {allFiles.Count}");
+        sb.AppendLine();
+
+        foreach (string file in allFiles)
+        {
+            string relativePath = file.Replace("\\", "/");
+
+            sb.AppendLine("########################################");
+            sb.AppendLine("FILE: " + relativePath);
+            sb.AppendLine("########################################");
+            sb.AppendLine();
+
+            sb.AppendLine(File.ReadAllText(file));
+
+            sb.AppendLine();
+            sb.AppendLine();
+        }
+
+        string savePath = Path.Combine(Application.dataPath, "..", outputFile);
+
+        File.WriteAllText(savePath, sb.ToString(), Encoding.UTF8);
+
+        Debug.Log($"<color=green>Export hoàn thành!</color> Đã xuất {allFiles.Count} file tại: {savePath}");
+
+        EditorUtility.RevealInFinder(savePath);
+    }
+}
+
+

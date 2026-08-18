@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 675362724a75e0346b4891792717c964, type: 3}
+  m_Name: ShapeData 1
+  m_EditorClassIdentifier: 
+  rows: 3
+  columns: 3
+  shapeBoard:
+  - colums: 010101
+    size: 0
+  - colums: 010101
+    size: 0
+  - colums: 010101
+    size: 0
+  colorPallete: {fileID: 11400000, guid: e5fd810fdefcaa94badb7d92c839fb4b, type: 2}
