@@ -10,15 +10,19 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 675362724a75e0346b4891792717c964, type: 3}
-  m_Name: ShapeData 1
+  m_Name: 1x1
   m_EditorClassIdentifier: 
-  rows: 3
-  columns: 3
+  rows: 5
+  columns: 5
   shapeBoard:
-  - colums: 010101
-    size: 0
-  - colums: 010101
-    size: 0
-  - colums: 010101
-    size: 0
-  colorPallete: {fileID: 11400000, guid: e5fd810fdefcaa94badb7d92c839fb4b, type: 2}
+  - colums: 0000000000
+    size: 5
+  - colums: 0000000000
+    size: 5
+  - colums: 0000010000
+    size: 5
+  - colums: 0000000000
+    size: 5
+  - colums: 0000000000
+    size: 5
+  colorPallete: {fileID: 0}

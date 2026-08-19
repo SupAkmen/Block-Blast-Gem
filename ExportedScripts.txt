@@ -1,7 +1,7 @@
 ﻿========================================
 UNITY SCRIPT EXPORT
 ========================================
-Tổng số file quét được: 8
+Tổng số file quét được: 13
 
 ########################################
 FILE: Assets/Scripts/ColorPallete.cs
@@ -235,7 +235,11 @@ public class GridBoard : MonoBehaviour
 
         foreach (ShapeSquare gridSquare in completeSquare)
         {
-            gridSquare.ResetToEmpty();
+            if (gridSquare != null)
+            {
+                gridSquare.ResetToEmpty();
+            }
+            
         }
     }
 }
@@ -479,51 +483,50 @@ public class ShapeInput : MonoBehaviour
         return worldPosition;
     }
 
-    private void CheckGrid()
-    {
-        Vector3 worldPosition = GetWorldPosition();
-        
-        Collider2D hit = Physics2D.OverlapPoint(worldPosition, gridMask);
-
-        if (hit == null)
-        {
-            return;
-        }
-        
-        ShapeSquare square = hit.GetComponent<ShapeSquare>();
-
-        if (square != null)
-        {
-            Debug.Log(square.name);
-        }
-    }
-
-    private void CheckShapeOnGrid()
-    {
-        if (selectedShape == null) return;
-
-        List<ShapeSquare> shapeSquares = selectedShape.GetActiveSquares();
-
-        foreach (ShapeSquare square in shapeSquares)
-        {
-            Vector3 worldPosition = GetWorldPosition();
-
-            Collider2D hit = Physics2D.OverlapPoint(worldPosition, gridMask);
-
-            if (hit == null)
-            {
-                return;
-            }
-
-            ShapeSquare gridSquare = hit.GetComponent<ShapeSquare>();
-
-            if (gridSquare != null)
-            {
-                    Debug.Log("Square " + square.name + "->" + gridSquare.name);
-            }
-        }
-
-    }
+    // private void CheckGrid()
+    // {
+    //     Vector3 worldPosition = GetWorldPosition();
+    //     
+    //     Collider2D hit = Physics2D.OverlapPoint(worldPosition, gridMask);
+    //
+    //     if (hit == null)
+    //     {
+    //         return;
+    //     }
+    //     
+    //     ShapeSquare square = hit.GetComponent<ShapeSquare>();
+    //
+    //     if (square != null)
+    //     {
+    //         Debug.Log(square.name);
+    //     }
+    // }
+    //
+    // private void CheckShapeOnGrid()
+    // {
+    //     if (selectedShape == null) return;
+    //
+    //     List<ShapeSquare> shapeSquares = selectedShape.GetActiveSquares();
+    //
+    //     foreach (ShapeSquare square in shapeSquares)
+    //     {
+    //         Vector3 worldPosition = GetWorldPosition();
+    //
+    //         Collider2D hit = Physics2D.OverlapPoint(worldPosition, gridMask);
+    //
+    //         if (hit == null)
+    //         {
+    //             return;
+    //         }
+    //
+    //         ShapeSquare gridSquare = hit.GetComponent<ShapeSquare>();
+    //
+    //         if (gridSquare != null)
+    //         {
+    //                 Debug.Log("Square " + square.name + "->" + gridSquare.name);
+    //         }
+    //     }
+    // }
 
     bool CanPlaceShape()
     {
@@ -683,12 +686,6 @@ namespace Block_Blast.Scripts
         
         private void Start()
         {
-            Debug.Log("ShapePool Start() được gọi");
-            Debug.Log($"shapeData count: {shapeData?.Count}");
-            Debug.Log($"spawnPositions length: {spawnPositions?.Length}");
-            Debug.Log($"gridBoard null? {gridBoard == null}");
-            Debug.Log($"shapePrerfab null? {shapePrerfab == null}");
-
             GenerateShape();
         }
         
@@ -714,14 +711,11 @@ namespace Block_Blast.Scripts
                     
                     attempts++;
                 }
-
-               
+                
                 if (selectedData == null)
                 {
-                    Debug.Log("No shape found");
                     continue;
                 }
-                
                 
                 Shape shape = Instantiate(shapePrerfab, spawnPositions[i].position, Quaternion.identity,spawnPositions[i]);
                 shape.SetShapeData(selectedData);
@@ -739,15 +733,12 @@ namespace Block_Blast.Scripts
                 }
             }
             
-            Debug.Log("Generate 3 shapes");
         }
 
         public void ShapePlaced()
         {
             placedShapeCount++;
             
-            Debug.Log("Shape Placed" + placedShapeCount);
-
             if (placedShapeCount >= spawnPositions.Length)
             {
                 GenerateShape();
@@ -779,6 +770,8 @@ public class ShapeSquare : MonoBehaviour
     private BoxCollider2D boxCollider2D;
     public bool IsActive;
     
+    private Vector3 startLocalscale;
+    
     // GridSquare dang bi chiem
     public bool IsOccupied { get; set; }
     
@@ -792,6 +785,7 @@ public class ShapeSquare : MonoBehaviour
 
     private void Start()
     {
+        startLocalscale = transform.localScale;
         if (!IsActive)
         {
             SetBlockVisual(false,false,false,false,false,false);
@@ -829,6 +823,8 @@ public class ShapeSquare : MonoBehaviour
             );
         
         CopyColorFrom(source);
+        
+        transform.localScale = startLocalscale;
     }
 
     public void SetBlockVisual(bool top, bool bottom, bool left, bool right, bool overlay, bool bonus)
@@ -911,9 +907,9 @@ public class ShapeSquare : MonoBehaviour
     public void ResetToEmpty()
     {
         IsOccupied = false;
-        SetBlockVisual(false,false,false,false,false,false);
         underlaySprite.SetActive(true);
-        transform.localScale = new Vector3(0.35f, 0.35f, 0.35f);
+        SetBlockVisual(false,false,false,false,false,false);
+        transform.localScale = startLocalscale;
         
         SetSpriteColor(underlaySprite,new Color(0.1927732f,0.3675f,0.7169812f,1f));
         SetSpriteColor(topSprite,Color.white);
@@ -944,6 +940,91 @@ public class ShapeSquare : MonoBehaviour
         transform.localScale = Vector3.zero;
     }
     
+}
+
+
+
+########################################
+FILE: Assets/Scripts/Enums/EGameEvent.cs
+########################################
+
+using UnityEngine;
+
+public enum EGameEvent
+{
+     LevelLoaded,
+     ShapePlaced,
+     LineDestroyed,
+     RestartLevel,
+     TutorialCompleted,
+     LevelAboutToComplete,
+     TimeExpired
+}
+
+
+
+########################################
+FILE: Assets/Scripts/Enums/EGameMode.cs
+########################################
+
+using UnityEngine;
+
+public enum EGameMode 
+{
+     Classic,
+     Advanture,
+     Timed
+}
+
+
+
+########################################
+FILE: Assets/Scripts/Enums/EGameState.cs
+########################################
+
+using UnityEngine;
+
+public enum EGameState 
+{
+     PrepareGame,
+     Tutorial,
+     Pause,
+     Playing,
+     PreFailed,
+     Win,
+     PreWin,
+     Failed,
+     WinWaiting,
+     Paused
+}
+
+
+
+########################################
+FILE: Assets/Scripts/Enums/ELevelType.cs
+########################################
+
+using UnityEngine;
+
+public enum ELevelType 
+{
+     Score,
+     CollectItems,
+     Classic
+}
+
+
+
+########################################
+FILE: Assets/Scripts/Enums/EMapType.cs
+########################################
+
+using UnityEngine;
+
+public enum EMapType 
+{
+     Tiled,
+     Scrollable
 }
 
 
