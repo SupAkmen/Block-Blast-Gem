@@ -67,6 +67,21 @@ namespace Block_Blast.Scripts
             
         }
 
+        public bool HasAvailableShapes()
+        {
+            Shape[] shapes = GetComponentsInChildren<Shape>();
+
+            if (shapes.Length == 0) return false;
+
+            foreach (Shape shape in shapes)
+            {
+                if(gridBoard.CanPlaceShapes((shape.GetShapeData())))
+                    return true;
+            }
+
+            return false;
+        }
+
         public void ShapePlaced()
         {
             placedShapeCount++;

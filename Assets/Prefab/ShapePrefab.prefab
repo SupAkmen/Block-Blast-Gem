@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 8544515328005799400}
   - component: {fileID: 8607903381249590905}
   - component: {fileID: 8095547977344474002}
-  m_Layer: 0
+  m_Layer: 11
   m_Name: ShapePrefab
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -98,6 +98,7 @@ MonoBehaviour:
   _offset: 0.015
   startScale: 0.7
   selectedScale: 1
+  shapeCollider2D: {fileID: 8607903381249590905}
 --- !u!1 &7798219159811671080
 GameObject:
   m_ObjectHideFlags: 0
@@ -107,7 +108,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 6088375439558078241}
-  m_Layer: 0
+  m_Layer: 11
   m_Name: StartPosition
   m_TagString: Untagged
   m_Icon: {fileID: 0}

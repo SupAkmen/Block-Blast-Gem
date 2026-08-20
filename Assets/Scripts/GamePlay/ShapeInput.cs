@@ -144,21 +144,23 @@ public class ShapeInput : MonoBehaviour
             if (gridBoard.GetGridSquare(square.transform.position, out ShapeSquare gridSquare))
             {
                 gridSquare.CopyFrom(square);
+
+                StartCoroutine(gridSquare.PopAnimation());
             }
         }
         
         List<ShapeSquare> completeSquares = gridBoard.GetCompleteRowOrColumn();
-        
+        bool wasLineCleared = completeSquares.Count > 0;
 
-        if (completeSquares.Count > 0)
+        if (wasLineCleared)
         {
            yield return StartCoroutine(gridBoard.ClearCompletedRowOrColumn(completeSquares));
         }
         
         Destroy(shape.gameObject);
-        
         shapePool.ShapePlaced();
         
+        GameManager.instance.OnShapePlaced(wasLineCleared);
     }
     
 
@@ -171,17 +173,22 @@ public class ShapeInput : MonoBehaviour
 
         if (hit == null)
             return;
+        
+        Shape shape = hit.GetComponent<Shape>();
 
-        ShapeSquare square = hit.GetComponent<ShapeSquare>();
+        if (shape == null)
+        {
+            ShapeSquare square = hit.GetComponent<ShapeSquare>();
+            if (square != null)
+            {
+                shape = square.GetComponentInParent<Shape>();
+            }
+        }
+        
+        if(shape == null) return;
 
-        if (square == null)
-            return;
-
-        selectedShape = square.GetComponentInParent<Shape>();
-
-        if (selectedShape == null)
-            return;
-
+        selectedShape = shape;
+        
         selectedShape.SelectedSquare();
         selectedShape.AddToOrderForAllSquares(100);
         offset = selectedShape.transform.position - worldPosition;

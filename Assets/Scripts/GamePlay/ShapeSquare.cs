@@ -70,7 +70,7 @@ public class ShapeSquare : MonoBehaviour
         
         CopyColorFrom(source);
         
-        transform.localScale = startLocalscale;
+        //transform.localScale = startLocalscale;
     }
 
     public void SetBlockVisual(bool top, bool bottom, bool left, bool right, bool overlay, bool bonus)
@@ -184,6 +184,36 @@ public class ShapeSquare : MonoBehaviour
         }
         
         transform.localScale = Vector3.zero;
+    }
+
+    public IEnumerator PopAnimation(float duration = 0.15f)
+    {
+        Vector3 startScale = transform.localScale;
+        Vector3 targetScale = startScale;
+        Vector3 midScale = new Vector3(0.25f,0.25f,0.25f);
+
+        float elapsed = 0f;
+        float halfDuration =  duration/2f;
+        while (elapsed < halfDuration)
+        {
+            elapsed += Time.deltaTime;
+            float t = elapsed / halfDuration;
+            transform.localScale = Vector3.Lerp(startScale,midScale,t);
+            yield return null;
+        }
+        transform.localScale = midScale;
+        
+        elapsed = 0f;
+        while (elapsed < halfDuration)
+        {
+            elapsed += Time.deltaTime;
+            float t = elapsed / halfDuration;
+            transform.localScale = Vector3.Lerp(midScale,targetScale,t);
+            yield return null;
+        }
+        
+        transform.localScale = targetScale;
+
     }
     
 }

@@ -1,10 +1,95 @@
 ﻿========================================
 UNITY SCRIPT EXPORT
 ========================================
-Tổng số file quét được: 13
+Tổng số file quét được: 20
 
 ########################################
-FILE: Assets/Scripts/ColorPallete.cs
+FILE: Assets/Scripts/Enums/EGameEvent.cs
+########################################
+
+using UnityEngine;
+
+public enum EGameEvent
+{
+     LevelLoaded,
+     ShapePlaced,
+     LineDestroyed,
+     RestartLevel,
+     TutorialCompleted,
+     LevelAboutToComplete,
+     TimeExpired
+}
+
+
+
+########################################
+FILE: Assets/Scripts/Enums/EGameMode.cs
+########################################
+
+using UnityEngine;
+
+public enum EGameMode 
+{
+     Classic,
+     Advanture,
+     Timed
+}
+
+
+
+########################################
+FILE: Assets/Scripts/Enums/EGameState.cs
+########################################
+
+using UnityEngine;
+
+public enum EGameState 
+{
+     PrepareGame,
+     Tutorial,
+     Pause,
+     Playing,
+     PreFailed,
+     Win,
+     PreWin,
+     Failed,
+     WinWaiting,
+     Paused
+}
+
+
+
+########################################
+FILE: Assets/Scripts/Enums/ELevelType.cs
+########################################
+
+using UnityEngine;
+
+public enum ELevelType 
+{
+     Score,
+     CollectItems,
+     Classic
+}
+
+
+
+########################################
+FILE: Assets/Scripts/Enums/EMapType.cs
+########################################
+
+using UnityEngine;
+
+public enum EMapType 
+{
+     Tiled,
+     Scrollable
+}
+
+
+
+########################################
+FILE: Assets/Scripts/GamePlay/ColorPallete.cs
 ########################################
 
 using UnityEngine;
@@ -24,7 +109,7 @@ public class ColorPallete : ScriptableObject
 
 
 ########################################
-FILE: Assets/Scripts/GridBoard.cs
+FILE: Assets/Scripts/GamePlay/GridBoard.cs
 ########################################
 
 using System.Collections;
@@ -226,12 +311,27 @@ public class GridBoard : MonoBehaviour
     {
         if(completeSquare == null || completeSquare.Count == 0)
             yield break;
+        
+        HashSet<ShapeSquare> uniqueSquares = new HashSet<ShapeSquare>(completeSquare);
+        int linesCleared = completeSquare.Count / columns;
+
+        if (linesCleared > 0)
+        {
+            ComboManager.instance.AddCombo();
+            ScoreManager.instance.AddScore(linesCleared,ComboManager.instance.CurrentCombo);
+        }
+        
+        List<Coroutine> animCoroutine = new List<Coroutine>();
 
         foreach (ShapeSquare gridSquare in completeSquare)
         {
-            StartCoroutine((gridSquare.ClearAnimation()));
+            animCoroutine.Add(StartCoroutine((gridSquare.ClearAnimation())));
         }
-        yield return new WaitForSeconds(0.15f);
+
+        foreach (Coroutine c in animCoroutine)
+        {
+            yield return c;
+        }
 
         foreach (ShapeSquare gridSquare in completeSquare)
         {
@@ -247,7 +347,7 @@ public class GridBoard : MonoBehaviour
 
 
 ########################################
-FILE: Assets/Scripts/Shape.cs
+FILE: Assets/Scripts/GamePlay/Shape.cs
 ########################################
 
 using System;
@@ -263,8 +363,11 @@ public class Shape : MonoBehaviour
      
      [SerializeField] public float startScale = 0.7f;
      [SerializeField] public float selectedScale = 1;
+     [SerializeField] private BoxCollider2D shapeCollider2D;
      
      private Vector3 initialPosition;
+     
+     
      private void Start()
      {
           transform.localScale = new Vector3(startScale, startScale, startScale);
@@ -297,7 +400,7 @@ public class Shape : MonoBehaviour
                }
           }
      }
-
+     
      public void SetShapeData(ShapeData shapeData)
      {
           currentShapeData = shapeData;
@@ -308,6 +411,8 @@ public class Shape : MonoBehaviour
           transform.localScale = new Vector3(startScale, startScale, startScale);
           initialPosition = transform.position;
      }
+     
+     public ShapeData GetShapeData() => currentShapeData;
 
      public void ApplyPalleteToAllSquares(ColorPallete pallete)
      {
@@ -370,7 +475,7 @@ public class Shape : MonoBehaviour
 
 
 ########################################
-FILE: Assets/Scripts/ShapeData.cs
+FILE: Assets/Scripts/GamePlay/ShapeData.cs
 ########################################
 
 using UnityEngine;
@@ -434,7 +539,22 @@ public class ShapeData : ScriptableObject
 
 
 ########################################
-FILE: Assets/Scripts/ShapeInput.cs
+FILE: Assets/Scripts/GamePlay/ShapeGhost.cs
+########################################
+
+using System.Collections.Generic;
+using UnityEngine;
+
+public class ShapeGhost : MonoBehaviour
+{
+     
+
+}
+
+
+
+########################################
+FILE: Assets/Scripts/GamePlay/ShapeInput.cs
 ########################################
 
 using System.Collections;
@@ -583,21 +703,23 @@ public class ShapeInput : MonoBehaviour
             if (gridBoard.GetGridSquare(square.transform.position, out ShapeSquare gridSquare))
             {
                 gridSquare.CopyFrom(square);
+
+                StartCoroutine(gridSquare.PopAnimation());
             }
         }
         
         List<ShapeSquare> completeSquares = gridBoard.GetCompleteRowOrColumn();
-        
+        bool wasLineCleared = completeSquares.Count > 0;
 
-        if (completeSquares.Count > 0)
+        if (wasLineCleared)
         {
            yield return StartCoroutine(gridBoard.ClearCompletedRowOrColumn(completeSquares));
         }
         
         Destroy(shape.gameObject);
-        
         shapePool.ShapePlaced();
         
+        GameManager.instance.OnShapePlaced(wasLineCleared);
     }
     
 
@@ -610,17 +732,22 @@ public class ShapeInput : MonoBehaviour
 
         if (hit == null)
             return;
+        
+        Shape shape = hit.GetComponent<Shape>();
 
-        ShapeSquare square = hit.GetComponent<ShapeSquare>();
+        if (shape == null)
+        {
+            ShapeSquare square = hit.GetComponent<ShapeSquare>();
+            if (square != null)
+            {
+                shape = square.GetComponentInParent<Shape>();
+            }
+        }
+        
+        if(shape == null) return;
 
-        if (square == null)
-            return;
-
-        selectedShape = square.GetComponentInParent<Shape>();
-
-        if (selectedShape == null)
-            return;
-
+        selectedShape = shape;
+        
         selectedShape.SelectedSquare();
         selectedShape.AddToOrderForAllSquares(100);
         offset = selectedShape.transform.position - worldPosition;
@@ -663,7 +790,7 @@ public class ShapeInput : MonoBehaviour
 
 
 ########################################
-FILE: Assets/Scripts/ShapePool.cs
+FILE: Assets/Scripts/GamePlay/ShapePool.cs
 ########################################
 
 using System;
@@ -735,6 +862,21 @@ namespace Block_Blast.Scripts
             
         }
 
+        public bool HasAvailableShapes()
+        {
+            Shape[] shapes = GetComponentsInChildren<Shape>();
+
+            if (shapes.Length == 0) return false;
+
+            foreach (Shape shape in shapes)
+            {
+                if(gridBoard.CanPlaceShapes((shape.GetShapeData())))
+                    return true;
+            }
+
+            return false;
+        }
+
         public void ShapePlaced()
         {
             placedShapeCount++;
@@ -749,7 +891,7 @@ namespace Block_Blast.Scripts
 
 
 ########################################
-FILE: Assets/Scripts/ShapeSquare.cs
+FILE: Assets/Scripts/GamePlay/ShapeSquare.cs
 ########################################
 
 using System;
@@ -824,7 +966,7 @@ public class ShapeSquare : MonoBehaviour
         
         CopyColorFrom(source);
         
-        transform.localScale = startLocalscale;
+        //transform.localScale = startLocalscale;
     }
 
     public void SetBlockVisual(bool top, bool bottom, bool left, bool right, bool overlay, bool bonus)
@@ -939,92 +1081,356 @@ public class ShapeSquare : MonoBehaviour
         
         transform.localScale = Vector3.zero;
     }
+
+    public IEnumerator PopAnimation(float duration = 0.15f)
+    {
+        Vector3 startScale = transform.localScale;
+        Vector3 targetScale = startScale;
+        Vector3 midScale = new Vector3(0.25f,0.25f,0.25f);
+
+        float elapsed = 0f;
+        float halfDuration =  duration/2f;
+        while (elapsed < halfDuration)
+        {
+            elapsed += Time.deltaTime;
+            float t = elapsed / halfDuration;
+            transform.localScale = Vector3.Lerp(startScale,midScale,t);
+            yield return null;
+        }
+        transform.localScale = midScale;
+        
+        elapsed = 0f;
+        while (elapsed < halfDuration)
+        {
+            elapsed += Time.deltaTime;
+            float t = elapsed / halfDuration;
+            transform.localScale = Vector3.Lerp(midScale,targetScale,t);
+            yield return null;
+        }
+        
+        transform.localScale = targetScale;
+
+    }
     
 }
 
 
 
 ########################################
-FILE: Assets/Scripts/Enums/EGameEvent.cs
+FILE: Assets/Scripts/Managers/ComboManager.cs
 ########################################
 
+using System;
 using UnityEngine;
 
-public enum EGameEvent
+public class ComboManager : SingletonBehaviour<ComboManager>
 {
-     LevelLoaded,
-     ShapePlaced,
-     LineDestroyed,
-     RestartLevel,
-     TutorialCompleted,
-     LevelAboutToComplete,
-     TimeExpired
+     public Action<int> OnComboChanged;
+
+     [SerializeField] private float comboTimeout = 2.0f;
+     
+     private int currentCombo = 0;
+     private float comboTimer = 0f;
+     
+     public int CurrentCombo => currentCombo;
+
+     public override void Awake()
+     {
+          base.Awake();
+     }
+
+     private void Update()
+     {
+          if (comboTimer > 0)
+          {
+               comboTimer -= Time.deltaTime;
+               if (comboTimer <= 0)
+               {
+                    ResetCombo();
+               }
+          }
+     }
+
+     public void AddCombo()
+     {
+          currentCombo++;
+          comboTimer = comboTimeout;
+          OnComboChanged?.Invoke(currentCombo);
+     }
+
+     public void ResetComboTimer()
+     {
+          if (currentCombo > 0)
+          {
+               comboTimer = comboTimeout;
+          }
+     }
+
+     public void ResetCombo()
+     {
+          if (currentCombo > 0)
+          {
+               currentCombo = 0;
+               comboTimer = 0f;
+               OnComboChanged?.Invoke(currentCombo);
+          }
+     }
 }
 
 
 
 ########################################
-FILE: Assets/Scripts/Enums/EGameMode.cs
+FILE: Assets/Scripts/Managers/GameManager.cs
 ########################################
 
+using System;
+using Block_Blast.Scripts;
 using UnityEngine;
 
-public enum EGameMode 
+public class GameManager : SingletonBehaviour<GameManager>
 {
-     Classic,
-     Advanture,
-     Timed
+    [SerializeField] private GridBoard gridBoard;
+    [SerializeField] private ShapePool shapePool;
+    
+    public Action<EGameState> OnGameStateChanged;
+    public Action<bool> OnGameOver;
+
+    private EGameState currentState;
+
+    public override void Awake()
+    {
+        base.Awake();
+    }
+
+    private void Start()
+    {
+        SetGameState(EGameState.Playing);
+    }
+
+    public void SetGameState(EGameState newState)
+    {
+        currentState = newState;
+        OnGameStateChanged?.Invoke(currentState);
+    }
+    
+    public EGameState GetGameState() => currentState;
+
+    public void OnShapePlaced(bool wasLineCleared)
+    {
+        if (currentState != EGameState.Playing) return;
+
+        if (!wasLineCleared)
+        {
+            ComboManager.instance.ResetComboTimer();
+        }
+
+        if (shapePool != null && !shapePool.HasAvailableShapes())
+        {
+            SetGameState(EGameState.Failed);
+            OnGameOver?.Invoke(false);
+        }
+    }
 }
 
 
 
 ########################################
-FILE: Assets/Scripts/Enums/EGameState.cs
+FILE: Assets/Scripts/Managers/ScoreManager.cs
 ########################################
 
+using System;
 using UnityEngine;
 
-public enum EGameState 
+public class ScoreManager : SingletonBehaviour<ScoreManager>
 {
-     PrepareGame,
-     Tutorial,
-     Pause,
-     Playing,
-     PreFailed,
-     Win,
-     PreWin,
-     Failed,
-     WinWaiting,
-     Paused
+     public Action<int> OnScoreUpdated;
+     public Action<int> OnHighScoreUpdated;
+
+     [SerializeField] private int baseLineScore = 10;
+
+     private int currentScore = 0;
+     private int highScore = 0;
+
+     public override void Awake()
+     {
+          base.Awake();
+          highScore = PlayerPrefs.GetInt("HighScore",0);
+     }
+     
+     public int CurrentScore => currentScore;
+     public int HighScore => highScore;
+
+     public void AddScore(int linesCleared,int currentCombo)
+     {
+          if (linesCleared <= 0) return;
+
+          float comboMultiplier = 1f + (currentCombo * 0.5f);
+          int points = Mathf.RoundToInt(linesCleared * baseLineScore * comboMultiplier);
+          
+          currentScore += points;
+          OnScoreUpdated?.Invoke(currentScore);
+
+          if (currentScore > highScore)
+          {
+               highScore = currentScore;
+               PlayerPrefs.SetInt("HighScore",highScore);
+               OnHighScoreUpdated?.Invoke(highScore);
+          }
+               
+     }
+
+     public void ResetScore()
+     {
+          currentScore = 0;
+          OnScoreUpdated?.Invoke(currentScore);
+     }
 }
 
 
 
 ########################################
-FILE: Assets/Scripts/Enums/ELevelType.cs
+FILE: Assets/Scripts/Managers/UIManager.cs
 ########################################
 
+using System;
+using TMPro;
 using UnityEngine;
 
-public enum ELevelType 
+public class UIManager : MonoBehaviour
 {
-     Score,
-     CollectItems,
-     Classic
+     [SerializeField] private TextMeshProUGUI scoreText;
+     [SerializeField] private TextMeshProUGUI highscoreText;
+     [SerializeField] private TextMeshProUGUI comboText;
+     [SerializeField] private GameObject gameOverPanel;
+
+     private void Start()
+     {
+          if (ScoreManager.instance != null)
+          {
+               ScoreManager.instance.OnScoreUpdated += UpdateScoreUI;
+               ScoreManager.instance.OnHighScoreUpdated += UpdateHighScoreUI;
+               
+               UpdateScoreUI(ScoreManager.instance.CurrentScore);
+               UpdateHighScoreUI(ScoreManager.instance.HighScore);
+          }
+
+          if (ComboManager.instance != null)
+          {
+               ComboManager.instance.OnComboChanged += UpdateComboUI;
+               UpdateComboUI(ComboManager.instance.CurrentCombo);
+          }
+
+          if (GameManager.instance != null)
+          {
+               GameManager.instance.OnGameOver += ShowGameOverPanel;
+          }
+          
+          if(gameOverPanel != null)
+               gameOverPanel.SetActive(false);
+     }
+
+     private void OnDestroy()
+     {
+          if (ScoreManager.instance != null)
+          {
+               ScoreManager.instance.OnScoreUpdated -= UpdateScoreUI;
+               ScoreManager.instance.OnHighScoreUpdated -= UpdateHighScoreUI;
+          }
+
+          if (ComboManager.instance != null)
+          {
+               ComboManager.instance.OnComboChanged -= UpdateComboUI;
+          }
+
+          if (GameManager.instance != null)
+               GameManager.instance.OnGameOver -= ShowGameOverPanel;
+     }
+
+     private void UpdateScoreUI(int newScore)
+     {
+          if (scoreText != null)
+          {
+               scoreText.text = newScore.ToString();
+          }
+     }
+
+     private void UpdateHighScoreUI(int newHighScore)
+     {
+          if (highscoreText != null)
+          {
+               highscoreText.text = newHighScore.ToString();
+          }
+     }
+
+     private void UpdateComboUI(int newCombo)
+     {
+          if (comboText != null)
+          {
+               if (newCombo > 0)
+               {
+                    comboText.text = $"x{newCombo}";
+                    comboText.gameObject.SetActive(true);
+               }
+               else
+               {
+                    comboText.gameObject.SetActive(false);
+               }
+          }
+     }
+
+     private void ShowGameOverPanel(bool isWin)
+     {
+          Debug.Log("Lose");
+          if (gameOverPanel != null)
+          {
+               gameOverPanel.SetActive(true);
+
+          }
+               
+     }
 }
 
 
 
 ########################################
-FILE: Assets/Scripts/Enums/EMapType.cs
+FILE: Assets/Scripts/System/SingletonBehaviour.cs
 ########################################
 
 using UnityEngine;
 
-public enum EMapType 
+public class SingletonBehaviour<T> : MonoBehaviour where T : SingletonBehaviour<T>
 {
-     Tiled,
-     Scrollable
+        private static T _instance;
+
+        public static T instance
+        { 
+                get
+                {
+                        if (_instance == null)
+                        {
+                                _instance = FindFirstObjectByType<T>();
+                        }
+                        
+                        return _instance;
+                }
+                private set
+                {
+                        _instance = value;
+                }
+        }
+
+        public virtual void Awake()
+        {
+                if (instance != null && instance != this)
+                {
+                        Destroy(this.gameObject);
+                }
+                else
+                {
+                        instance = (T) this;    
+                }
+        }
+    
 }
 
 
@@ -1140,6 +1546,135 @@ public class ExportScriptTool : EditorWindow
         Debug.Log($"<color=green>Export hoàn thành!</color> Đã xuất {allFiles.Count} file tại: {savePath}");
 
         EditorUtility.RevealInFinder(savePath);
+    }
+}
+
+
+########################################
+FILE: Assets/Editor/ShapeDataCreator.cs
+########################################
+
+using UnityEngine;
+using UnityEditor;
+
+public class ShapeDataCreator : EditorWindow
+{
+    private int gridSize = 5;
+    private bool[,] grid;
+    private string shapeName = "NewShape";
+    private ColorPallete colorPallete;
+
+    [MenuItem("Tools/Create Shape Data")]
+    public static void ShowWindow()
+    {
+        GetWindow<ShapeDataCreator>("Shape Data Creator");
+    }
+
+    private void OnEnable()
+    {
+        grid = new bool[gridSize, gridSize];
+    }
+
+    private void OnGUI()
+    {
+        GUILayout.Label("Shape Data Creator", EditorStyles.boldLabel);
+        EditorGUILayout.Space();
+
+        // Tên shape
+        shapeName = EditorGUILayout.TextField("Shape Name", shapeName);
+
+        // Chọn ColorPallete
+        colorPallete = (ColorPallete)EditorGUILayout.ObjectField(
+            "Color Pallete", colorPallete, typeof(ColorPallete), false);
+
+        EditorGUILayout.Space();
+        GUILayout.Label($"Grid ({gridSize}×{gridSize})", EditorStyles.boldLabel);
+
+        // Vẽ bảng lưới
+        for (int row = 0; row < gridSize; row++)
+        {
+            EditorGUILayout.BeginHorizontal();
+            for (int col = 0; col < gridSize; col++)
+            {
+                bool current = grid[row, col];
+                Color originalColor = GUI.backgroundColor;
+                GUI.backgroundColor = current ? Color.green : Color.gray;
+
+                if (GUILayout.Button("", GUILayout.Width(40), GUILayout.Height(40)))
+                {
+                    grid[row, col] = !grid[row, col];
+                }
+                GUI.backgroundColor = originalColor;
+            }
+            EditorGUILayout.EndHorizontal();
+        }
+
+        EditorGUILayout.Space();
+        EditorGUILayout.BeginHorizontal();
+        if (GUILayout.Button("Clear Grid"))
+        {
+            ClearGrid();
+        }
+        if (GUILayout.Button("Export Shape Data"))
+        {
+            ExportShapeData();
+        }
+        EditorGUILayout.EndHorizontal();
+    }
+
+    private void ClearGrid()
+    {
+        for (int r = 0; r < gridSize; r++)
+            for (int c = 0; c < gridSize; c++)
+                grid[r, c] = false;
+    }
+
+    private void ExportShapeData()
+    {
+        if (string.IsNullOrEmpty(shapeName))
+        {
+            EditorUtility.DisplayDialog("Error", "Please enter a shape name.", "OK");
+            return;
+        }
+
+        // Tạo ShapeData
+        ShapeData shapeData = ScriptableObject.CreateInstance<ShapeData>();
+        shapeData.rows = gridSize;
+        shapeData.columns = gridSize;
+        shapeData.shapeBoard = new ShapeData.Row[gridSize];
+
+        for (int r = 0; r < gridSize; r++)
+        {
+            shapeData.shapeBoard[r] = new ShapeData.Row(gridSize);
+            for (int c = 0; c < gridSize; c++)
+            {
+                shapeData.shapeBoard[r].colums[c] = grid[r, c];
+            }
+        }
+        shapeData.colorPallete = colorPallete;
+
+        // Chọn nơi lưu
+        string path = EditorUtility.SaveFilePanel("Save Shape Data", "Assets", shapeName, "asset");
+        if (string.IsNullOrEmpty(path))
+            return;
+
+        // Chuyển sang đường dẫn tương đối với Assets
+        if (path.StartsWith(Application.dataPath))
+        {
+            path = "Assets" + path.Substring(Application.dataPath.Length);
+        }
+        else
+        {
+            EditorUtility.DisplayDialog("Error", "Path must be inside the Assets folder.", "OK");
+            return;
+        }
+
+        AssetDatabase.CreateAsset(shapeData, path);
+        AssetDatabase.SaveAssets();
+        AssetDatabase.Refresh();
+
+        EditorUtility.DisplayDialog("Success", $"Shape Data created at: {path}", "OK");
+        Selection.activeObject = shapeData;
     }
 }
 

@@ -11,8 +11,11 @@ public class Shape : MonoBehaviour
      
      [SerializeField] public float startScale = 0.7f;
      [SerializeField] public float selectedScale = 1;
+     [SerializeField] private BoxCollider2D shapeCollider2D;
      
      private Vector3 initialPosition;
+     
+     
      private void Start()
      {
           transform.localScale = new Vector3(startScale, startScale, startScale);
@@ -45,7 +48,7 @@ public class Shape : MonoBehaviour
                }
           }
      }
-
+     
      public void SetShapeData(ShapeData shapeData)
      {
           currentShapeData = shapeData;
@@ -56,6 +59,8 @@ public class Shape : MonoBehaviour
           transform.localScale = new Vector3(startScale, startScale, startScale);
           initialPosition = transform.position;
      }
+     
+     public ShapeData GetShapeData() => currentShapeData;
 
      public void ApplyPalleteToAllSquares(ColorPallete pallete)
      {

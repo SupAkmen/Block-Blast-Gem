@@ -197,12 +197,27 @@ public class GridBoard : MonoBehaviour
     {
         if(completeSquare == null || completeSquare.Count == 0)
             yield break;
+        
+        HashSet<ShapeSquare> uniqueSquares = new HashSet<ShapeSquare>(completeSquare);
+        int linesCleared = completeSquare.Count / columns;
+
+        if (linesCleared > 0)
+        {
+            ComboManager.instance.AddCombo();
+            ScoreManager.instance.AddScore(linesCleared,ComboManager.instance.CurrentCombo);
+        }
+        
+        List<Coroutine> animCoroutine = new List<Coroutine>();
 
         foreach (ShapeSquare gridSquare in completeSquare)
         {
-            StartCoroutine((gridSquare.ClearAnimation()));
+            animCoroutine.Add(StartCoroutine((gridSquare.ClearAnimation())));
         }
-        yield return new WaitForSeconds(0.15f);
+
+        foreach (Coroutine c in animCoroutine)
+        {
+            yield return c;
+        }
 
         foreach (ShapeSquare gridSquare in completeSquare)
         {
