@@ -92,6 +92,19 @@ public class Shape : MonoBehaviour
           return squares;
      }
 
+     public void SetAlpha(float alpha)
+     {
+          foreach (Transform child in transform)
+          {
+               ShapeSquare shapeSquare = child.GetComponent<ShapeSquare>();
+               if (shapeSquare != null)
+               {
+                    shapeSquare.SetAlpha(alpha);
+               }
+              
+          }
+     }
+
      public void AddToOrderForAllSquares(int offset)
      {
           foreach (Transform child in transform)

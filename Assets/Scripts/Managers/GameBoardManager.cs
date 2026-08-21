@@ -2,7 +2,7 @@ using System;
 using Block_Blast.Scripts;
 using UnityEngine;
 
-public class GameManager : SingletonBehaviour<GameManager>
+public class GameBoardManager : SingletonBehaviour<GameBoardManager>
 {
     [SerializeField] private GridBoard gridBoard;
     [SerializeField] private ShapePool shapePool;

@@ -26,9 +26,9 @@ public class UIManager : MonoBehaviour
                UpdateComboUI(ComboManager.instance.CurrentCombo);
           }
 
-          if (GameManager.instance != null)
+          if (GameBoardManager.instance != null)
           {
-               GameManager.instance.OnGameOver += ShowGameOverPanel;
+               GameBoardManager.instance.OnGameOver += ShowGameOverPanel;
           }
           
           if(gameOverPanel != null)
@@ -48,8 +48,8 @@ public class UIManager : MonoBehaviour
                ComboManager.instance.OnComboChanged -= UpdateComboUI;
           }
 
-          if (GameManager.instance != null)
-               GameManager.instance.OnGameOver -= ShowGameOverPanel;
+          if (GameBoardManager.instance != null)
+               GameBoardManager.instance.OnGameOver -= ShowGameOverPanel;
      }
 
      private void UpdateScoreUI(int newScore)

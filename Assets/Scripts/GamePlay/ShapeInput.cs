@@ -10,7 +10,10 @@ public class ShapeInput : MonoBehaviour
     [SerializeField] private LayerMask shapeMask;
     [SerializeField] private GridBoard gridBoard;
     [SerializeField] private ShapePool shapePool;
+    [SerializeField] private float ghostAlpha = 0.4f;
+    
     private Shape selectedShape;
+    private GameObject ghostShape;
     private Vector3 offset;
     private bool isDragging;
     
@@ -160,7 +163,7 @@ public class ShapeInput : MonoBehaviour
         Destroy(shape.gameObject);
         shapePool.ShapePlaced();
         
-        GameManager.instance.OnShapePlaced(wasLineCleared);
+        GameBoardManager.instance.OnShapePlaced(wasLineCleared);
     }
     
 
@@ -168,11 +171,9 @@ public class ShapeInput : MonoBehaviour
     private void SelectShape()
     {
         Vector3 worldPosition = GetWorldPosition();
-
         Collider2D hit =  Physics2D.OverlapPoint(worldPosition,shapeMask);
 
-        if (hit == null)
-            return;
+        if (hit == null)  return;
         
         Shape shape = hit.GetComponent<Shape>();
 
@@ -187,8 +188,13 @@ public class ShapeInput : MonoBehaviour
         
         if(shape == null) return;
 
+        if (ghostShape != null)
+        {
+            Destroy(ghostShape);
+            ghostShape = null;
+        }
+
         selectedShape = shape;
-        
         selectedShape.SelectedSquare();
         selectedShape.AddToOrderForAllSquares(100);
         offset = selectedShape.transform.position - worldPosition;
@@ -197,16 +203,65 @@ public class ShapeInput : MonoBehaviour
 
     private void DragShape()
     {
+        if(selectedShape == null) return;
+        
         Vector3 worldPosition = GetWorldPosition();
         selectedShape.transform.position = worldPosition + offset;
         
         bool canPlace  = CanPlaceShape();
+
+        if (canPlace)
+        {
+            Vector3 snapPosition = GetSnapPosition(selectedShape);
+
+            if (ghostShape == null)
+            {
+                ghostShape = Instantiate(selectedShape.gameObject);
+                
+                Collider2D col = ghostShape.GetComponent<Collider2D>();
+                if(col != null) col.enabled = false;
+                
+                Shape ghostScript = ghostShape.GetComponent<Shape>();
+                if (ghostScript != null)
+                {
+                    ghostScript.startScale = selectedShape.selectedScale;
+                    
+                    ghostScript.SetAlpha(ghostAlpha);
+                    
+                    ghostScript.AddToOrderForAllSquares(-100);
+                    
+                    ghostScript.SnapToPosition(snapPosition);
+                }
+            }
+            else
+            {
+                Shape ghostScript = ghostShape.GetComponent<Shape>();
+
+                if (ghostScript != null)
+                {
+                    ghostScript.SnapToPosition(snapPosition);
+                }
+            }
+        }
+        else
+        {
+            if (ghostShape != null)
+            {
+                Destroy(ghostShape);
+                ghostShape = null;
+            }
+        }
     }
 
     private void ReleaseShape()
     {
-        if (selectedShape == null)
-            return;
+        if (selectedShape == null)  return;
+
+        if (ghostShape != null)
+        {
+            Destroy(ghostShape);
+            ghostShape = null;
+        }
         
         bool canPlace = CanPlaceShape();
 

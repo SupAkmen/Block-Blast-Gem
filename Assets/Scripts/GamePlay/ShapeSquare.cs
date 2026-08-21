@@ -166,6 +166,31 @@ public class ShapeSquare : MonoBehaviour
         SetSpriteColor(bonusSprite,Color.white);
     }
 
+    public void SetAlpha(float alpha)
+    {
+        SetSpriteAlpha(underlaySprite,alpha);
+        SetSpriteAlpha(topSprite,alpha);
+        SetSpriteAlpha(bottomSprite,alpha);
+        SetSpriteAlpha(leftSprite,alpha);
+        SetSpriteAlpha(rightSprite,alpha);
+        SetSpriteAlpha(overlaySprite,alpha);
+        SetSpriteAlpha(bonusSprite,alpha);
+    }
+
+    public void SetSpriteAlpha(GameObject obj, float alpha)
+    {
+        if(obj == null) return;
+        
+        SpriteRenderer sr = obj.GetComponent<SpriteRenderer>();
+
+        if (sr != null)
+        {
+            Color color = sr.color;
+            color.a = alpha;
+            sr.color = color;
+        }
+    }
+
     public IEnumerator ClearAnimation()
     {
         Vector3 startScale = transform.localScale;
