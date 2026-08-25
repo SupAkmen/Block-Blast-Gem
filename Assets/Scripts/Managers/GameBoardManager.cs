@@ -34,10 +34,7 @@ public class GameBoardManager : SingletonBehaviour<GameBoardManager>
     {
         if (currentState != EGameState.Playing) return;
 
-        if (!wasLineCleared)
-        {
-            ComboManager.instance.ResetComboTimer();
-        }
+        ComboManager.instance.OnShapePlaced(wasLineCleared);
 
         if (shapePool != null && !shapePool.HasAvailableShapes())
         {

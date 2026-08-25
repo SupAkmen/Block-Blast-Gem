@@ -203,7 +203,6 @@ public class GridBoard : MonoBehaviour
 
         if (linesCleared > 0)
         {
-            ComboManager.instance.AddCombo();
             ScoreManager.instance.AddScore(linesCleared,ComboManager.instance.CurrentCombo);
         }
         

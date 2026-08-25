@@ -5,10 +5,10 @@ public class ComboManager : SingletonBehaviour<ComboManager>
 {
      public Action<int> OnComboChanged;
 
-     [SerializeField] private float comboTimeout = 2.0f;
+     [SerializeField] private float resetComboAfterMoves = 3;
      
      private int currentCombo = 0;
-     private float comboTimer = 0f;
+     private int movesSinceLastCombo = 0;
      
      public int CurrentCombo => currentCombo;
 
@@ -17,39 +17,34 @@ public class ComboManager : SingletonBehaviour<ComboManager>
           base.Awake();
      }
 
-     private void Update()
+     
+     public void OnShapePlaced(bool wasLineCleared)
      {
-          if (comboTimer > 0)
+          movesSinceLastCombo++;
+          
+          if (wasLineCleared)
           {
-               comboTimer -= Time.deltaTime;
-               if (comboTimer <= 0)
+               movesSinceLastCombo = 0;
+          }
+          else
+          {
+               movesSinceLastCombo++;
+
+               if (movesSinceLastCombo >= resetComboAfterMoves)
                {
                     ResetCombo();
                }
           }
      }
-
-     public void AddCombo()
-     {
-          currentCombo++;
-          comboTimer = comboTimeout;
-          OnComboChanged?.Invoke(currentCombo);
-     }
-
-     public void ResetComboTimer()
-     {
-          if (currentCombo > 0)
-          {
-               comboTimer = comboTimeout;
-          }
-     }
+   
 
      public void ResetCombo()
      {
           if (currentCombo > 0)
           {
                currentCombo = 0;
-               comboTimer = 0f;
+               movesSinceLastCombo = 0;
+               
                OnComboChanged?.Invoke(currentCombo);
           }
      }

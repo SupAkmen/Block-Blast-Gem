@@ -38,6 +38,11 @@ public class PoolObject : MonoBehaviour
 
      private GameObject Get()
      {
+          if (!GameManager.instance.gameSettings.enablePool)
+          {
+               return Create();
+          }
+
           return null;
      }
      

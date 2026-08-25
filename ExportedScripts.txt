@@ -1,7 +1,122 @@
 ﻿========================================
 UNITY SCRIPT EXPORT
 ========================================
-Tổng số file quét được: 20
+Tổng số file quét được: 27
+
+########################################
+FILE: Assets/Scripts/Data/ResourceObject.cs
+########################################
+
+using System;
+using System.Threading.Tasks;
+using UnityEngine;
+
+    [Serializable]
+    public class ResourceValue
+    {
+        
+    }
+    public abstract class ResourceObject : ScriptableObject
+    {
+        public ResourceValue value;
+
+        // Name of the resource
+        public string ResourceName => name;
+        
+        public abstract int DefaultValue { get; }
+        
+        // Value of the resource
+        private int Resource;
+
+        public AudioClip sound;
+
+        public delegate void ResourceUpdate(int count);
+        
+        // Event for resource update
+        public event ResourceUpdate OnResourceUpdate;
+
+        private async Task OnEnable()
+        {
+            await Task.Delay(1000); 
+            LoadPrefs();
+        }
+
+        public void LoadPrefs()
+        {
+            Resource = LoadResource();
+        }
+        
+        public int LoadResource()
+        {
+            return PlayerPrefs.GetInt(ResourceName,DefaultValue);
+        }
+
+        // Add amount to resource and save to player prefs
+        public void Add(int amount)
+        {
+            Resource += amount;
+            PlayerPrefs.SetInt(ResourceName, Resource);
+            PlayerPrefs.Save();
+            OnResourceChanged();
+        }
+        
+        //Set resource to amount and save to player prefs
+        public void Set(int amount)
+        {
+            Resource = amount;
+            PlayerPrefs.SetInt(ResourceName, Resource);
+            PlayerPrefs.Save();
+            OnResourceChanged();
+        }
+        
+        //Consumes amount from resource and save to playerprefs if there is enough
+        public virtual bool Consumes(int amount)
+        {
+            if (IsEnough(amount))
+            {
+                Resource -= amount;
+                PlayerPrefs.SetInt(ResourceName, Resource);
+                PlayerPrefs.Save();
+                OnResourceChanged();
+                return true;
+            }
+            
+            return false;
+        }
+
+
+        // callback for ui elements
+        private void OnResourceChanged()
+        {
+            OnResourceUpdate?.Invoke(Resource);
+        }
+
+        // get the resource
+        public int GetValue()
+        {
+            return Resource;
+        }
+
+        // Check if the resource is enough
+        public bool IsEnough(int targetAmount)
+        {
+            if (GetValue() < targetAmount)
+            {
+                Debug.Log("Not engough" + ResourceName);
+            }
+            
+            return GetValue() >= targetAmount;
+        }
+        
+        public abstract void ResetResource();
+        
+        
+        
+    }
+
+
+
+
 
 ########################################
 FILE: Assets/Scripts/Enums/EGameEvent.cs
@@ -89,7 +204,7 @@ public enum EMapType
 
 
 ########################################
-FILE: Assets/Scripts/GamePlay/ColorPallete.cs
+FILE: Assets/Scripts/Gameplay/ColorPallete.cs
 ########################################
 
 using UnityEngine;
@@ -109,7 +224,7 @@ public class ColorPallete : ScriptableObject
 
 
 ########################################
-FILE: Assets/Scripts/GamePlay/GridBoard.cs
+FILE: Assets/Scripts/Gameplay/GridBoard.cs
 ########################################
 
 using System.Collections;
@@ -347,7 +462,7 @@ public class GridBoard : MonoBehaviour
 
 
 ########################################
-FILE: Assets/Scripts/GamePlay/Shape.cs
+FILE: Assets/Scripts/Gameplay/Shape.cs
 ########################################
 
 using System;
@@ -449,7 +564,11 @@ public class Shape : MonoBehaviour
           foreach (Transform child in transform)
           {
                ShapeSquare shapeSquare = child.GetComponent<ShapeSquare>();
-               shapeSquare.SetAlpha(alpha);
+               if (shapeSquare != null)
+               {
+                    shapeSquare.SetAlpha(alpha);
+               }
+              
           }
      }
 
@@ -484,7 +603,7 @@ public class Shape : MonoBehaviour
 
 
 ########################################
-FILE: Assets/Scripts/GamePlay/ShapeData.cs
+FILE: Assets/Scripts/Gameplay/ShapeData.cs
 ########################################
 
 using UnityEngine;
@@ -548,7 +667,7 @@ public class ShapeData : ScriptableObject
 
 
 ########################################
-FILE: Assets/Scripts/GamePlay/ShapeFadeUnder.cs
+FILE: Assets/Scripts/Gameplay/ShapeFadeUnder.cs
 ########################################
 
 using System.Collections.Generic;
@@ -564,7 +683,7 @@ public class ShapeFadeUnder : MonoBehaviour
 
 
 ########################################
-FILE: Assets/Scripts/GamePlay/ShapeInput.cs
+FILE: Assets/Scripts/Gameplay/ShapeInput.cs
 ########################################
 
 using System.Collections;
@@ -732,7 +851,7 @@ public class ShapeInput : MonoBehaviour
         Destroy(shape.gameObject);
         shapePool.ShapePlaced();
         
-        GameManager.instance.OnShapePlaced(wasLineCleared);
+        GameBoardManager.instance.OnShapePlaced(wasLineCleared);
     }
     
 
@@ -793,7 +912,11 @@ public class ShapeInput : MonoBehaviour
                 Shape ghostScript = ghostShape.GetComponent<Shape>();
                 if (ghostScript != null)
                 {
+                    ghostScript.startScale = selectedShape.selectedScale;
+                    
                     ghostScript.SetAlpha(ghostAlpha);
+                    
+                    ghostScript.AddToOrderForAllSquares(-100);
                     
                     ghostScript.SnapToPosition(snapPosition);
                 }
@@ -851,7 +974,7 @@ public class ShapeInput : MonoBehaviour
 
 
 ########################################
-FILE: Assets/Scripts/GamePlay/ShapePool.cs
+FILE: Assets/Scripts/Gameplay/ShapePool.cs
 ########################################
 
 using System;
@@ -952,7 +1075,7 @@ namespace Block_Blast.Scripts
 
 
 ########################################
-FILE: Assets/Scripts/GamePlay/ShapeSquare.cs
+FILE: Assets/Scripts/Gameplay/ShapeSquare.cs
 ########################################
 
 using System;
@@ -1266,14 +1389,14 @@ public class ComboManager : SingletonBehaviour<ComboManager>
 
 
 ########################################
-FILE: Assets/Scripts/Managers/GameManager.cs
+FILE: Assets/Scripts/Managers/GameBoardManager.cs
 ########################################
 
 using System;
 using Block_Blast.Scripts;
 using UnityEngine;
 
-public class GameManager : SingletonBehaviour<GameManager>
+public class GameBoardManager : SingletonBehaviour<GameBoardManager>
 {
     [SerializeField] private GridBoard gridBoard;
     [SerializeField] private ShapePool shapePool;
@@ -1406,9 +1529,9 @@ public class UIManager : MonoBehaviour
                UpdateComboUI(ComboManager.instance.CurrentCombo);
           }
 
-          if (GameManager.instance != null)
+          if (GameBoardManager.instance != null)
           {
-               GameManager.instance.OnGameOver += ShowGameOverPanel;
+               GameBoardManager.instance.OnGameOver += ShowGameOverPanel;
           }
           
           if(gameOverPanel != null)
@@ -1428,8 +1551,8 @@ public class UIManager : MonoBehaviour
                ComboManager.instance.OnComboChanged -= UpdateComboUI;
           }
 
-          if (GameManager.instance != null)
-               GameManager.instance.OnGameOver -= ShowGameOverPanel;
+          if (GameBoardManager.instance != null)
+               GameBoardManager.instance.OnGameOver -= ShowGameOverPanel;
      }
 
      private void UpdateScoreUI(int newScore)
@@ -1474,6 +1597,159 @@ public class UIManager : MonoBehaviour
           }
                
      }
+}
+
+
+
+########################################
+FILE: Assets/Scripts/Pool/AutoReturnToPool.cs
+########################################
+
+using UnityEngine;
+
+public class AutoReturnToPool : MonoBehaviour
+{
+     
+}
+
+
+
+########################################
+FILE: Assets/Scripts/Pool/InitialAmountPool.cs
+########################################
+
+using UnityEngine;
+
+public class InitialAmountPool : MonoBehaviour
+{
+     
+}
+
+
+
+########################################
+FILE: Assets/Scripts/Pool/PoolObject.cs
+########################################
+
+using System;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class PoolObject : MonoBehaviour
+{
+     protected static readonly Dictionary<string, PoolObject> pools = new();
+     
+     public GameObject prefab;
+
+     protected Queue<GameObject> pool = new();
+
+     private void Awake()
+     {
+          if (prefab != null)
+          {
+               SetPrefab(prefab);
+          }
+     }
+
+     public void SetPrefab(GameObject newPrefab)
+     {
+          pools[newPrefab.name] = this;
+          prefab = newPrefab;
+     }
+
+     private void OnDestroy()
+     {
+          pools.Clear();
+     }
+
+     protected GameObject Create()
+     {
+          var item = Instantiate(prefab, transform);
+          item.name = prefab.name;
+          return item;
+     }
+
+     private GameObject Get()
+     {
+          return null;
+     }
+     
+     
+}
+
+
+
+########################################
+FILE: Assets/Scripts/Settings/GameSettings.cs
+########################################
+
+using UnityEngine;
+
+/// <summary>
+/// He thong cac setting co ban cua game
+/// </summary>
+[CreateAssetMenu(fileName = "GameSetting", menuName = "Scriptable Objects/GameSettings")]
+public class GameSettings : SettingBase
+{
+     [Header("On Start Game")]
+     public int startCoins;
+
+     [Header("Monetization")]
+     public int coinForAd = 25;
+     public bool enableAds = true;
+     public bool enableInApps = true;
+     public bool enableLuckySpin = true;
+     public bool enablePreFailPopUp = true;
+
+     [Header("GDPR Settings")] 
+     public string privacyPolicyUrl;
+     public bool skipConsentPopup;
+
+     [Header("Timed mode")]
+     public bool enableTimeMode = false;
+     public int globalTimeModeSeconds = 60; // Default time value for timed mode
+     public int continueTimerBonus = 30;
+
+     [Header("GamePlay")]
+     public int scorePerLine = 10;
+     public bool enablePool;
+     public int resetComboAfterMoves = 3;
+
+     public int continuePrice = 15;
+     public int failTimerStart = 5;
+
+     [Header("Map Settings")] 
+     public EMapType mapType = EMapType.Tiled;
+
+     public int maxLevelRows = 8;
+     public int maxLevelColumns = 8;
+
+}
+
+
+
+########################################
+FILE: Assets/Scripts/Settings/SettingBase.cs
+########################################
+
+using UnityEngine;
+
+public abstract class SettingBase : ScriptableObject
+{
+     
+}
+
+
+
+########################################
+FILE: Assets/Scripts/Settings/TutorialSetting.cs
+########################################
+
+using UnityEngine;
+
+public class TutorialSetting : ScriptableObject
+{
+     public ShapeData[] tutorialShape;
 }
 
 
