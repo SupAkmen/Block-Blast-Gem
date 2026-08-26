@@ -64,7 +64,6 @@ namespace Block_Blast.Scripts
                     shape.ApplyPalleteToAllSquares(randomPallete);
                 }
             }
-            
         }
 
         public bool HasAvailableShapes()

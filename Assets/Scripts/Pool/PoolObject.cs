@@ -42,7 +42,75 @@ public class PoolObject : MonoBehaviour
           {
                return Create();
           }
+          
+          var item = pool.Count == 0 ? Create() : pool.Dequeue();
+          if (item.activeSelf && pool.Count > 0)
+          {
+               item = pool.Dequeue();
+          }
+          
+          item.SetActive(true);
+          return item;
+     }
 
+     public static void Return(GameObject item)
+     {
+          if (item == null)
+          {
+               return;
+          }
+
+          if (!GameManager.instance?.gameSettings.enablePool ?? true)
+          {
+               Destroy(item);
+               return;
+          }
+          
+          item.SetActive(false);
+
+          if (pools.TryGetValue(item.name, out var pool))
+          {
+               pool.pool.Enqueue(item);
+          }
+     }
+
+     public static GameObject GetObject(GameObject prefab)
+     {
+          return GetPool(prefab);
+     }
+
+     public static GameObject GetObject(GameObject prefab, Vector3 position)
+     {
+          var item = GetPool(prefab);
+          item.transform.position = position;
+          return item;
+     }
+
+     private static GameObject GetPool(GameObject prefab)
+     {
+          var prefabName = prefab.name;
+          
+          if(pools.TryGetValue(prefabName, out var pool))
+          {
+               return pool.Get();
+          }
+          
+          var poolObject = new GameObject(prefabName).AddComponent<PoolObject>();
+          poolObject.transform.SetParent(GameObject.Find("FXPool").transform);
+          poolObject.prefab = prefab;
+          poolObject.transform.localScale = Vector3.one;
+          pools.Add(prefabName, poolObject);
+          return poolObject.Get();
+     }
+
+     public static GameObject GetObject(string prefabName)
+     {
+          if (pools.TryGetValue(prefabName, out var pool))
+          {
+               return pool.Get();
+          }
+               
+          Debug.LogError($"Pool with namw {prefabName} not found");
           return null;
      }
      

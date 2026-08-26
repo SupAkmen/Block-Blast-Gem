@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 using System.Collections;
+using Unity.VisualScripting;
 using UnityEngine.EventSystems;
 
 [RequireComponent(typeof(Animator))]
@@ -33,6 +34,43 @@ public class CustomButon : Button
           {
                return;
           }
+
+          if (transition != Transition.Animation)
+          {
+               Pressed();
+          }
+
+          isClicked = true;
+          
+          //Start cooldown
+          if (gameObject.activeInHierarchy)
+          {
+               StartCoroutine(Cooldown());
+          }
+          
+          base.OnPointerClick(eventData);
+     }
+
+     public void Pressed()
+     {
+          if (blockInput)
+          {
+               return;
+          }
+          
+          ExecutedEvent();
+     }
+
+     private void ExecutedEvent()
+     {
+          onClick?.Invoke();
+          base.onClick?.Invoke();
+     }
+
+     IEnumerator Cooldown()
+     {
+          yield return new WaitForSeconds(cooldownTime);
+          isClicked = false;
      }
 
 }
