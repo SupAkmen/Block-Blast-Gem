@@ -153,6 +153,17 @@ namespace PopUps
                 fader.FadeOut();
             }
         }
+
+        public void CloseAllPopUp()
+        {
+            for (var i = 0; i < popUpStack.Count; i++)
+            {
+                var popUp = popUpStack[i];
+                popUp.Close();
+            }
+            
+            popUpStack.Clear();
+        }
         
         
         
