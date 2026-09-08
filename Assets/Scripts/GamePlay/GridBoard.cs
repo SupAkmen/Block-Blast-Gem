@@ -1,11 +1,12 @@
 using System.Collections;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Serialization;
 
 public class GridBoard : MonoBehaviour
 {
-    [FormerlySerializedAs("colums")] [SerializeField] private int columns = 8;
+    [SerializeField] private int columns = 8;
     [SerializeField] private int rows = 8; 
     [SerializeField] ShapeSquare shapeSquarePrefab;
     [SerializeField] Transform startPosition;
@@ -56,7 +57,6 @@ public class GridBoard : MonoBehaviour
         
         return gridSquare != null;
     }
-
     
     public Vector3 GetGridSquarePosition(Vector3 worldPosition)
     {
@@ -73,6 +73,8 @@ public class GridBoard : MonoBehaviour
         
         return gridSquares[row, column].transform.position;
     }
+    
+    
 
     public List<ShapeSquare> GetCompleteRowOrColumn()
     {
@@ -124,7 +126,12 @@ public class GridBoard : MonoBehaviour
         
         return completeSquare;
     }
-
+    
+    /// <summary>
+    /// Kiem tra xem board co the dat nhung hinh nao de spawn shape in shapepool
+    /// </summary>
+    /// <param name="shapeData"></param>
+    /// <returns></returns>
     public bool CanPlaceShapes(ShapeData shapeData)
     {
         int shapeRows = shapeData.rows;

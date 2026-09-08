@@ -158,7 +158,7 @@ public class ShapeInput : MonoBehaviour
         if (wasLineCleared)
         {
             ComboManager.instance.OnShapePlaced(true);
-           yield return StartCoroutine(gridBoard.ClearCompletedRowOrColumn(completeSquares));
+            yield return StartCoroutine(gridBoard.ClearCompletedRowOrColumn(completeSquares));
         }
         else
         {

@@ -13,7 +13,6 @@ public class ShapeSquare : MonoBehaviour
     [SerializeField] private GameObject overlaySprite;
     [SerializeField] private GameObject bonusSprite;
     
-    private BoxCollider2D boxCollider2D;
     public bool IsActive;
     
     private Vector3 startLocalscale;
@@ -21,14 +20,6 @@ public class ShapeSquare : MonoBehaviour
     // GridSquare dang bi chiem
     public bool IsOccupied { get; set; }
     
-    private Shape shape;
-    
-    private void Awake()
-    {
-        boxCollider2D = GetComponent<BoxCollider2D>();
-        shape = GetComponentInParent<Shape>();
-    }
-
     private void Start()
     {
         startLocalscale = transform.localScale;
@@ -150,22 +141,6 @@ public class ShapeSquare : MonoBehaviour
         }
     }
 
-    public void ResetToEmpty()
-    {
-        IsOccupied = false;
-        underlaySprite.SetActive(true);
-        SetBlockVisual(false,false,false,false,false,false);
-        transform.localScale = startLocalscale;
-        
-        SetSpriteColor(underlaySprite,new Color(0.1927732f,0.3675f,0.7169812f,1f));
-        SetSpriteColor(topSprite,Color.white);
-        SetSpriteColor(bottomSprite,Color.white);
-        SetSpriteColor(leftSprite,Color.white);
-        SetSpriteColor(rightSprite,Color.white);
-        SetSpriteColor(overlaySprite,Color.white);
-        SetSpriteColor(bonusSprite,Color.white);
-    }
-
     public void SetAlpha(float alpha)
     {
         SetSpriteAlpha(underlaySprite,alpha);
@@ -190,7 +165,25 @@ public class ShapeSquare : MonoBehaviour
             sr.color = color;
         }
     }
-
+    
+    
+    
+    public void ResetToEmpty()
+    {
+        IsOccupied = false;
+        underlaySprite.SetActive(true);
+        SetBlockVisual(false,false,false,false,false,false);
+        transform.localScale = startLocalscale;
+        
+        SetSpriteColor(underlaySprite,new Color(0.1927732f,0.3675f,0.7169812f,1f));
+        SetSpriteColor(topSprite,Color.white);
+        SetSpriteColor(bottomSprite,Color.white);
+        SetSpriteColor(leftSprite,Color.white);
+        SetSpriteColor(rightSprite,Color.white);
+        SetSpriteColor(overlaySprite,Color.white);
+        SetSpriteColor(bonusSprite,Color.white);
+    }
+    
     public IEnumerator ClearAnimation()
     {
         Vector3 startScale = transform.localScale;

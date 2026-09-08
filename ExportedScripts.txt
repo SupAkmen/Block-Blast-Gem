@@ -1,7 +1,526 @@
 ﻿========================================
 UNITY SCRIPT EXPORT
 ========================================
-Tổng số file quét được: 27
+Tổng số file quét được: 59
+
+########################################
+FILE: Assets/Scripts/AnimationBehaviours/CallButtonMethod.cs
+########################################
+
+using UnityEngine;
+
+public class CallButtonMethod : StateMachineBehaviour
+{
+     [SerializeField] private string btnMethod;
+
+     public override void OnStateEnter(Animator animator, AnimatorStateInfo stateInfo, int layerIndex)
+     {
+          base.OnStateEnter(animator, stateInfo, layerIndex);
+          var component = animator.gameObject.GetComponent<CustomButon>();
+          if (component != null)
+          {
+               component.Invoke(btnMethod,0.3f);
+          }
+     }
+}
+
+
+
+########################################
+FILE: Assets/Scripts/AnimationBehaviours/CallPopUpMethod.cs
+########################################
+
+using UnityEngine;
+
+namespace AnimationBehaviours
+{
+    public class CallPopUpMethod : StateMachineBehaviour
+    {
+        [SerializeField] private string popUpMethodName;
+
+        public override void OnStateEnter(Animator animator, AnimatorStateInfo stateInfo, int layerIndex)
+        {
+            var component  = animator.gameObject.GetComponent<PopUp>();
+            if (component != null)
+            {
+                component.Invoke(popUpMethodName,0f);
+            }
+        }
+    }
+}
+
+
+########################################
+FILE: Assets/Scripts/AnimationBehaviours/DelayBeforeStart.cs
+########################################
+
+using UnityEngine;
+
+namespace AnimationBehaviours
+{
+    public class DelayBeforeStart : StateMachineBehaviour
+    {
+        private float delay;
+        private bool hasStartedOnce;
+
+        [SerializeField] private float delayMax;
+
+        public override void OnStateEnter(Animator animator, AnimatorStateInfo stateInfo, int layerIndex)
+        {
+            if (!hasStartedOnce)
+            {
+                delay = delayMax;
+                animator.speed = 0;
+            }
+            else
+            {
+                animator.speed = 1;
+            }
+        }
+
+        public override void OnStateUpdate(Animator animator, AnimatorStateInfo stateInfo, int layerIndex)
+        {
+            if (!hasStartedOnce)
+            {
+                delay -= Time.deltaTime;
+
+                if (delay <= 0)
+                {
+                    animator.speed = 1;
+                    hasStartedOnce = true;
+                }
+            }
+        }
+    }
+}
+
+
+########################################
+FILE: Assets/Scripts/AnimationBehaviours/RandomDelayBeforeStart.cs
+########################################
+
+using UnityEngine;
+
+namespace AnimationBehaviours
+{
+    public class RandomDelayBeforeStart : StateMachineBehaviour
+    {
+        private float delay;
+        private bool hasStartedOnce;
+
+        [SerializeField] private float randomMax;
+
+        public override void OnStateEnter(Animator animator, AnimatorStateInfo stateInfo, int layerIndex)
+        {
+            if (!hasStartedOnce)
+            {
+                delay =  Random.Range(0, randomMax);
+                animator.speed = 0;
+            }
+            else
+            {
+                animator.speed = 1;
+            }
+        }
+
+        public override void OnStateUpdate(Animator animator, AnimatorStateInfo stateInfo, int layerIndex)
+        {
+            if (!hasStartedOnce)
+            {
+                delay -= Time.deltaTime;
+
+                if (delay <= 0)
+                {
+                    animator.speed = 1;
+                    hasStartedOnce = true;
+                }
+            }
+        }
+    }
+}
+
+
+########################################
+FILE: Assets/Scripts/AnimationBehaviours/RandomizedState.cs
+########################################
+
+using UnityEngine;
+
+namespace AnimationBehaviours
+{
+    /// <summary>
+    /// Dung de random thoi gian cho truoc khi kich hoat mot animation trigger
+    /// </summary>
+    public class RandomizedState : StateMachineBehaviour
+    {
+        [Header("Randomized State")] 
+        [SerializeField] private float minTime = 2f;
+        [SerializeField] private float maxTime = 4f;
+        [SerializeField] private string randomFinishedStr = "RandomFinished";
+
+        private float currentTimeBeforeBlink;
+        private float timeElapsed;
+
+        private bool triggered;
+
+        public override void OnStateEnter(Animator animator, AnimatorStateInfo stateInfo, int layerIndex)
+        {
+            Randomize();
+            triggered = false;
+        }
+
+        private void Randomize()
+        {
+            currentTimeBeforeBlink = Random.Range(minTime, maxTime);
+            timeElapsed = 0;
+        }
+
+        public override void OnStateUpdate(Animator animator, AnimatorStateInfo stateInfo, int layerIndex)
+        {
+            if(triggered) return;
+            
+            timeElapsed += Time.deltaTime;
+
+            if (timeElapsed >= currentTimeBeforeBlink)
+            {
+                triggered = true;
+                animator.SetTrigger(Animator.StringToHash(randomFinishedStr));
+            }
+        }
+        
+        
+    }
+}
+
+
+########################################
+FILE: Assets/Scripts/AnimationBehaviours/RandomTransitionBehaviour.cs
+########################################
+
+using System.Collections.Generic;
+using UnityEngine;
+
+namespace AnimationBehaviours
+{
+    public class RandomTransitionBehaviour  : StateMachineBehaviour
+    {
+        public override void OnStateEnter(Animator animator, AnimatorStateInfo stateInfo, int layerIndex)
+        {
+            var parameters = animator.parameters;
+            
+            var triggerParam = new List<AnimatorControllerParameter>();
+            foreach (var param in parameters)
+            {
+                if (param.type == AnimatorControllerParameterType.Trigger)
+                {
+                    triggerParam.Add(param);
+                }
+            }
+
+            if (triggerParam.Count > 0)
+            {
+                var randomIndex  = Random.Range(0, triggerParam.Count);
+                var randomTriggerName = triggerParam[randomIndex].name;
+                
+                animator.SetTrigger(randomTriggerName);
+            }
+        }
+    }
+}
+
+
+########################################
+FILE: Assets/Scripts/AnimationBehaviours/RandomWaitTime.cs
+########################################
+
+using UnityEngine;
+
+namespace AnimationBehaviours
+{
+    public class RandomWaitTime : StateMachineBehaviour
+    {
+        public float minWaitTime = 2f;
+        public float maxWaitTime = 5f;
+
+        private float nextChangeTime;
+        private bool isPlaying;
+
+        public override void OnStateEnter(Animator animator, AnimatorStateInfo stateInfo, int layerIndex)
+        {
+            nextChangeTime = Time.time + Random.Range(minWaitTime, maxWaitTime);
+        }
+
+        public override void OnStateUpdate(Animator animator, AnimatorStateInfo stateInfo, int layerIndex)
+        {
+            if (Time.time >= nextChangeTime)
+            {
+                isPlaying = !isPlaying;
+                animator.speed = isPlaying ? 1 : 0;
+                nextChangeTime = Time.time + Random.Range(minWaitTime, maxWaitTime);
+            }
+        }
+    }
+}
+
+
+########################################
+FILE: Assets/Scripts/Attributes/IconPreviewAttribute.cs
+########################################
+
+using UnityEngine;
+
+namespace Attributes
+{
+    public class IconPreviewAttribute : PropertyAttribute
+    {
+        
+    }
+}
+
+
+########################################
+FILE: Assets/Scripts/Audio/MusicBase.cs
+########################################
+
+using System;
+using UnityEngine;
+using UnityEngine.Audio;
+
+[RequireComponent(typeof(AudioSource))]
+public class MusicBase : SingletonBehaviour<MusicBase>
+{
+     [SerializeField] private AudioMixer mixer;
+     [SerializeField] private string musicParameter = "musicVolume";
+
+     private void Start()
+     {
+          mixer.SetFloat(musicParameter, PlayerPrefs.GetInt("Music", 1) == 0 ? -80 : 0);
+     }
+}
+
+
+
+########################################
+FILE: Assets/Scripts/Audio/SoundBase.cs
+########################################
+
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.Audio;
+using Random = UnityEngine.Random;
+
+public class SoundBase : SingletonBehaviour<SoundBase>
+{
+     [SerializeField] private AudioMixer mixer;
+     [SerializeField] private string soundParameter = "soundVolume";
+
+     public AudioClip click;
+     public AudioClip[] swish;
+     public AudioClip coins;
+     public AudioClip coinsSpend;
+     public AudioClip luckySpin;
+     public AudioClip warningTime;
+     public AudioClip placeShape;
+     public AudioClip fillEmpty;
+     public AudioClip alert;
+     public AudioClip[] combo;
+     
+     private AudioSource audioSource;
+
+     private readonly HashSet<AudioClip> clipPlaying = new();
+
+     public override void Awake()
+     {
+          base.Awake();
+          audioSource = GetComponent<AudioSource>();
+     }
+
+     private void Start()
+     {
+          mixer.SetFloat(soundParameter, PlayerPrefs.GetInt("Sound", 1) == 0 ? -80 : 0);
+     }
+
+     public void PlaySound(AudioClip clip)
+     {
+          if (clip != null)
+          {
+               audioSource.PlayOneShot(clip);
+          }
+     }
+
+     public void PlayDelayed(AudioClip clip, float delay)
+     {
+          StartCoroutine((PlayDelayedCoroutine(clip, delay)));
+     }
+
+     private IEnumerator PlayDelayedCoroutine(AudioClip clip, float delay)
+     {
+          yield return new WaitForSeconds(delay);
+          PlaySound(clip);
+     }
+
+     public void PlaySoundRandom(AudioClip[] clip)
+     {
+          instance.PlaySound(clip[Random.Range(0, clip.Length)]);
+     }
+
+     public void PlayLimitSound(AudioClip clip)
+     {
+          if (clipPlaying.Add(clip))
+          {
+               PlaySound(clip);
+               StartCoroutine(WaitForCompleteSound(clip));
+          }
+     }
+
+     private IEnumerator WaitForCompleteSound(AudioClip clip)
+     {
+          yield return new WaitForSeconds(0.1f);
+          clipPlaying.Remove(clip);
+     }
+}
+
+
+
+########################################
+FILE: Assets/Scripts/Audio/UISoundSequence.cs
+########################################
+
+using UnityEngine;
+
+public class UISoundSequence : MonoBehaviour
+{
+     void Start()
+       {
+       		 
+        }
+
+     void Update()
+       {
+       		 
+        }
+}
+
+
+
+########################################
+FILE: Assets/Scripts/Data/Coins.cs
+########################################
+
+using UnityEngine;
+
+namespace Data
+{
+    public class Coins : ResourceObject
+    {
+        public override int DefaultValue => Resources.Load<GameSettings>("Settings/GameSetting").startCoins;
+
+        public override bool Consumes(int amount)
+        {
+            return base.Consumes(amount);
+        }
+
+        public override void ResetResource()
+        {
+            
+        }
+    }
+}
+
+
+########################################
+FILE: Assets/Scripts/Data/ResourceItem.cs
+########################################
+
+using UnityEngine;
+
+namespace Data
+{
+    [CreateAssetMenu (fileName = "ResourceData", menuName = "ResourceData", order = 1)]
+    public class ResourceItem : ResourceObject
+    {
+        public int defaultValue;
+        
+        public override int DefaultValue => defaultValue;
+        public override void ResetResource()
+        {
+            
+        }
+    }
+}
+
+
+########################################
+FILE: Assets/Scripts/Data/ResourceManager.cs
+########################################
+
+using UnityEngine;
+
+namespace Data
+{
+    public class ResourceManager : SingletonBehaviour<ResourceManager>
+    {
+        private ResourceObject[] resources;
+
+        public ResourceObject[] Resources
+        {
+            get
+            {
+                if (resources == null || resources.Length == 0)
+                {
+                    Init();
+                }
+                
+                return resources;
+            }
+            
+            set => resources = value;
+        }
+
+        public override void Awake()
+        {
+            base.Awake();
+            Init();
+        }
+
+        private void Init()
+        {
+            Resources = UnityEngine.Resources.LoadAll<ResourceObject>("Variables");
+
+            foreach (var resource in Resources)
+            {
+                resource.LoadPrefs();
+            }
+        }
+
+        public bool Consume(string resourceName, int amount)
+        {
+            var resource = GetResource(resourceName);
+
+            if (resource == null)
+            {
+                Debug.LogError($"Resource {resourceName} not found");
+                return false;
+            }
+            
+            return resource.Consumes(amount);
+        }
+
+        public ResourceObject GetResource(string resourceName)
+        {
+            foreach (var resource in Resources)
+            {
+                if (resource.name == resourceName)
+                {
+                    return resource;
+                }
+            }
+            return null;
+        }
+    }
+}
+
 
 ########################################
 FILE: Assets/Scripts/Data/ResourceObject.cs
@@ -224,9 +743,38 @@ public class ColorPallete : ScriptableObject
 
 
 ########################################
+FILE: Assets/Scripts/Gameplay/ComboText.cs
+########################################
+
+using TMPro;
+using UnityEngine;
+
+namespace Block_Blast.Scripts
+{
+    public class ComboText : MonoBehaviour
+    {
+        public TextMeshProUGUI text;
+        public Animator animator;
+
+        private void SetText(int comboCount)
+        {
+            text.text = "x" + comboCount.ToString();
+            text.alignment = TextAlignmentOptions.Center;
+        }
+
+        public void Show(int comboCount)
+        {
+            SetText(comboCount);
+        }
+    }
+}
+
+
+########################################
 FILE: Assets/Scripts/Gameplay/GridBoard.cs
 ########################################
 
+using System.Collections;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -234,7 +782,7 @@ using UnityEngine.Serialization;
 
 public class GridBoard : MonoBehaviour
 {
-    [FormerlySerializedAs("colums")] [SerializeField] private int columns = 8;
+    [SerializeField] private int columns = 8;
     [SerializeField] private int rows = 8; 
     [SerializeField] ShapeSquare shapeSquarePrefab;
     [SerializeField] Transform startPosition;
@@ -432,7 +980,6 @@ public class GridBoard : MonoBehaviour
 
         if (linesCleared > 0)
         {
-            ComboManager.instance.AddCombo();
             ScoreManager.instance.AddScore(linesCleared,ComboManager.instance.CurrentCombo);
         }
         
@@ -845,7 +1392,12 @@ public class ShapeInput : MonoBehaviour
 
         if (wasLineCleared)
         {
+            ComboManager.instance.OnShapePlaced(true);
            yield return StartCoroutine(gridBoard.ClearCompletedRowOrColumn(completeSquares));
+        }
+        else
+        {
+            ComboManager.instance.OnShapePlaced(false);
         }
         
         Destroy(shape.gameObject);
@@ -1043,7 +1595,6 @@ namespace Block_Blast.Scripts
                     shape.ApplyPalleteToAllSquares(randomPallete);
                 }
             }
-            
         }
 
         public bool HasAvailableShapes()
@@ -1093,7 +1644,6 @@ public class ShapeSquare : MonoBehaviour
     [SerializeField] private GameObject overlaySprite;
     [SerializeField] private GameObject bonusSprite;
     
-    private BoxCollider2D boxCollider2D;
     public bool IsActive;
     
     private Vector3 startLocalscale;
@@ -1101,14 +1651,6 @@ public class ShapeSquare : MonoBehaviour
     // GridSquare dang bi chiem
     public bool IsOccupied { get; set; }
     
-    private Shape shape;
-    
-    private void Awake()
-    {
-        boxCollider2D = GetComponent<BoxCollider2D>();
-        shape = GetComponentInParent<Shape>();
-    }
-
     private void Start()
     {
         startLocalscale = transform.localScale;
@@ -1326,6 +1868,153 @@ public class ShapeSquare : MonoBehaviour
 
 
 ########################################
+FILE: Assets/Scripts/GUI/CustomButon.cs
+########################################
+
+using UnityEngine;
+using UnityEngine.UI;
+using System.Collections;
+using Unity.VisualScripting;
+using UnityEngine.EventSystems;
+
+[RequireComponent(typeof(Animator))]
+public class CustomButon : Button
+{
+     public AudioClip overrideClickSound;
+     public RuntimeAnimatorController overriderAnimatorController;
+     private bool isClicked;
+     private readonly float cooldownTime = 0.5f;
+     public new ButtonClickedEvent onClick;
+     private new Animator animator;
+
+     private static bool blockInput;
+
+     protected override void OnEnable()
+     {
+          base.OnEnable();
+          animator = GetComponent<Animator>();
+          if (overriderAnimatorController != null)
+          {
+               animator.runtimeAnimatorController = overriderAnimatorController;
+          }
+          
+          isClicked = false;
+     }
+
+     public override void OnPointerClick(PointerEventData eventData)
+     {
+          if (blockInput || isClicked)
+          {
+               return;
+          }
+
+          if (transition != Transition.Animation)
+          {
+               Pressed();
+          }
+
+          isClicked = true;
+          
+          //Start cooldown
+          if (gameObject.activeInHierarchy)
+          {
+               StartCoroutine(Cooldown());
+          }
+          
+          base.OnPointerClick(eventData);
+     }
+
+     public void Pressed()
+     {
+          if (blockInput)
+          {
+               return;
+          }
+          
+          ExecutedEvent();
+     }
+
+     private void ExecutedEvent()
+     {
+          onClick?.Invoke();
+          base.onClick?.Invoke();
+     }
+
+     IEnumerator Cooldown()
+     {
+          yield return new WaitForSeconds(cooldownTime);
+          isClicked = false;
+     }
+
+}
+
+
+
+########################################
+FILE: Assets/Scripts/GUI/FxCanvas.cs
+########################################
+
+using UnityEngine;
+
+public class FxCanvas : MonoBehaviour
+{
+    
+}
+
+
+
+########################################
+FILE: Assets/Scripts/LevelData/FillAndPreview.cs
+########################################
+
+using UnityEngine;
+
+namespace LevelData
+{
+    public abstract class FillAndPreview : MonoBehaviour
+    {
+        public abstract void FillICon(ScriptableObject iconScriptableObject);
+    }
+}
+
+
+########################################
+FILE: Assets/Scripts/LevelData/ShapeSquareTemplate.cs
+########################################
+
+using UnityEngine;
+
+namespace LevelData
+{
+    [CreateAssetMenu(fileName = "ShapeSquareTemplate",menuName = "LevelData/ShapeSquareTemplate")]
+    public class ShapeSquareTemplate : ScriptableObject
+    {
+        public Color backgroundColor;
+        public Color underlayColor;
+        public Color bottomColor;
+        public Color topColor;
+        public Color leftColor;
+        public Color rightColor;
+        public Color overlayColor;
+
+        public Sprite backgroundSprite;
+        public Sprite underlaySprite;
+        public Sprite bottomSprite;
+        public Sprite topSprite;
+        public Sprite leftSprite;
+        public Sprite rightSprite;
+        public Sprite overlaySprite;
+        
+        public bool[] colorEnable = new bool[7]{true,true,true,true,true,true,true};
+
+        public ShapeSquare customShapeSquarePrefab;
+        
+        public bool HasCustomPrefab() => customShapeSquarePrefab != null;
+    }
+}
+
+
+########################################
 FILE: Assets/Scripts/Managers/ComboManager.cs
 ########################################
 
@@ -1336,10 +2025,10 @@ public class ComboManager : SingletonBehaviour<ComboManager>
 {
      public Action<int> OnComboChanged;
 
-     [SerializeField] private float comboTimeout = 2.0f;
+     [SerializeField] private float resetComboAfterMoves = 3;
      
      private int currentCombo = 0;
-     private float comboTimer = 0f;
+     private int movesSinceLastCombo = 0;
      
      public int CurrentCombo => currentCombo;
 
@@ -1348,39 +2037,34 @@ public class ComboManager : SingletonBehaviour<ComboManager>
           base.Awake();
      }
 
-     private void Update()
+     
+     public void OnShapePlaced(bool wasLineCleared)
      {
-          if (comboTimer > 0)
+          movesSinceLastCombo++;
+          
+          if (wasLineCleared)
           {
-               comboTimer -= Time.deltaTime;
-               if (comboTimer <= 0)
+               movesSinceLastCombo = 0;
+          }
+          else
+          {
+               movesSinceLastCombo++;
+
+               if (movesSinceLastCombo >= resetComboAfterMoves)
                {
                     ResetCombo();
                }
           }
      }
-
-     public void AddCombo()
-     {
-          currentCombo++;
-          comboTimer = comboTimeout;
-          OnComboChanged?.Invoke(currentCombo);
-     }
-
-     public void ResetComboTimer()
-     {
-          if (currentCombo > 0)
-          {
-               comboTimer = comboTimeout;
-          }
-     }
+   
 
      public void ResetCombo()
      {
           if (currentCombo > 0)
           {
                currentCombo = 0;
-               comboTimer = 0f;
+               movesSinceLastCombo = 0;
+               
                OnComboChanged?.Invoke(currentCombo);
           }
      }
@@ -1428,10 +2112,7 @@ public class GameBoardManager : SingletonBehaviour<GameBoardManager>
     {
         if (currentState != EGameState.Playing) return;
 
-        if (!wasLineCleared)
-        {
-            ComboManager.instance.ResetComboTimer();
-        }
+        ComboManager.instance.OnShapePlaced(wasLineCleared);
 
         if (shapePool != null && !shapePool.HasAvailableShapes())
         {
@@ -1671,10 +2352,615 @@ public class PoolObject : MonoBehaviour
 
      private GameObject Get()
      {
+          if (!GameManager.instance.gameSettings.enablePool)
+          {
+               return Create();
+          }
+          
+          var item = pool.Count == 0 ? Create() : pool.Dequeue();
+          if (item.activeSelf && pool.Count > 0)
+          {
+               item = pool.Dequeue();
+          }
+          
+          item.SetActive(true);
+          return item;
+     }
+
+     public static void Return(GameObject item)
+     {
+          if (item == null)
+          {
+               return;
+          }
+
+          if (!GameManager.instance?.gameSettings.enablePool ?? true)
+          {
+               Destroy(item);
+               return;
+          }
+          
+          item.SetActive(false);
+
+          if (pools.TryGetValue(item.name, out var pool))
+          {
+               pool.pool.Enqueue(item);
+          }
+     }
+
+     public static GameObject GetObject(GameObject prefab)
+     {
+          return GetPool(prefab);
+     }
+
+     public static GameObject GetObject(GameObject prefab, Vector3 position)
+     {
+          var item = GetPool(prefab);
+          item.transform.position = position;
+          return item;
+     }
+
+     private static GameObject GetPool(GameObject prefab)
+     {
+          var prefabName = prefab.name;
+          
+          if(pools.TryGetValue(prefabName, out var pool))
+          {
+               return pool.Get();
+          }
+          
+          var poolObject = new GameObject(prefabName).AddComponent<PoolObject>();
+          poolObject.transform.SetParent(GameObject.Find("FXPool").transform);
+          poolObject.prefab = prefab;
+          poolObject.transform.localScale = Vector3.one;
+          pools.Add(prefabName, poolObject);
+          return poolObject.Get();
+     }
+
+     public static GameObject GetObject(string prefabName)
+     {
+          if (pools.TryGetValue(prefabName, out var pool))
+          {
+               return pool.Get();
+          }
+               
+          Debug.LogError($"Pool with namw {prefabName} not found");
           return null;
      }
      
      
+}
+
+
+
+########################################
+FILE: Assets/Scripts/PopUps/EPopUpResult.cs
+########################################
+
+using UnityEngine;
+
+public enum EPopUpResult 
+{
+     Yes,
+     No,
+     Continue,
+     Cancel,
+     Restart
+}
+
+
+
+########################################
+FILE: Assets/Scripts/PopUps/Fader.cs
+########################################
+
+using System;
+using DG.Tweening;
+using UnityEngine;
+using UnityEngine.UI;
+
+namespace PopUps
+{
+    public class Fader : MonoBehaviour
+    {
+        public Image fader;
+        private readonly float defaultFadeTime = 0.1f;
+        private readonly float maxValue = 0.997f;
+
+        public bool IsFaded()
+        {
+            return fader.color.a >= maxValue;
+        }
+
+        public void FadeIn(float fadeAlpha, Action action = null)
+        {
+            FadeIn(fadeAlpha,defaultFadeTime ,action);
+        }
+
+        public void FadeIn(float fadeAlpha, float duration, Action action = null)
+        {
+            fader.gameObject.SetActive(true);
+            fader.DOFade(fadeAlpha,duration).OnComplete(() => action?.Invoke());
+        }
+
+        public void FadeOut()
+        {
+            FadeOut(defaultFadeTime);
+        }
+        
+        public void FadeOut(float duration)
+        {
+            fader.DOFade(0, duration).OnComplete(() => fader.gameObject.SetActive(false));
+        }
+    }
+}
+
+
+########################################
+FILE: Assets/Scripts/PopUps/MenuManager.cs
+########################################
+
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
+using UnityEngine;
+using UnityEngine.SceneManagement;
+
+namespace PopUps
+{
+    public class MenuManager : SingletonBehaviour<MenuManager>
+    {
+        public Fader fader;
+        public List<PopUp> popUpStack = new List<PopUp>();
+
+        [SerializeField] private Canvas canvas;
+
+        private static bool _isAdShowing = false;
+
+        public override void Awake()
+        {
+            base.Awake();
+            DontDestroyOnLoad(gameObject);
+        }
+
+        private void OnEnable()
+        {
+            PopUp.OnClosePopup += ClosePopUp;
+            PopUp.OnBeforeCloseAction += OnBeforeCloseAction;
+            SceneManager.activeSceneChanged += OnSceneLoaded;
+        }
+
+        private void OnBeforeCloseAction(PopUp popUp)
+        {
+            if (fader != null && popUpStack.Count == 0)
+            {
+                fader.FadeOut();
+            }
+        }
+
+        private void OnSceneLoaded(Scene scene, Scene scene1)
+        {
+            if (canvas == null && this != null)
+            {
+                canvas= GetComponent<Canvas>();
+            }
+            
+            canvas.worldCamera = Camera.main;
+        }
+        
+        private void OnDisable()
+        {
+            PopUp.OnClosePopup -= ClosePopUp;
+            PopUp.OnBeforeCloseAction -= OnBeforeCloseAction;
+            SceneManager.activeSceneChanged -= OnSceneLoaded;
+        }
+        
+        
+
+        public T ShowPopUp<T>(Action onShow = null, Action<EPopUpResult> onClose = null) where T : PopUp
+        {
+            // Ktra xem popup nay co dang mo hay ko
+            if (popUpStack.OfType<T>().Any())
+            {
+                return popUpStack.OfType<T>().First();
+            }
+            
+            return (T)ShowPopUp("PopUps/" +  typeof(T).Name, onShow, onClose);
+        }
+
+        public PopUp ShowPopUp(string pathWithType, Action onShow = null, Action<EPopUpResult> onClose = null)
+        {
+
+            if (popUpStack.Any(p => p.GetType().Name == pathWithType.Split('/').Last()))
+            {
+                return popUpStack.First(p => p.GetType().Name == pathWithType.Split('/').Last());
+            }
+            
+            var popUpPrefab = Resources.Load<PopUp>(pathWithType);
+            if (popUpPrefab == null)
+            {
+                return null;
+            }
+            
+            return ShowPopUp(popUpPrefab, onShow, onClose);
+        }
+
+        public PopUp ShowPopUp(PopUp popUpPrefab, Action onShow = null, Action<EPopUpResult> onClose = null)
+        {
+            var popUp = Instantiate(popUpPrefab, transform);
+
+            if (popUpStack.Count > 0)
+            {
+                popUpStack.Last().Hide();
+            }
+            
+            popUpStack.Add(popUp);
+
+            if (fader != null && popUpStack.Count > 0 && popUp.fade)
+            {
+                fader.FadeIn(.997f,popUp.FadeInDuration);
+            }
+            
+            popUp.InitDelayedShow(onShow, onClose);
+            
+            return popUp;
+        }
+
+        public PopUp ShowPopUpDelayed(PopUp popUpPrefab, Action onShow = null, Action<EPopUpResult> onClose = null)
+        {
+            float delay = popUpPrefab.apperanceDelay;
+
+            if (fader != null && popUpPrefab.fade)
+            {
+                fader.FadeIn(0.997f,popUpPrefab.FadeInDuration);
+            }
+            
+            StartCoroutine(ShowPopUpDelayed(popUpPrefab,delay, onShow, onClose));
+
+            return null;
+        }
+
+        private IEnumerator ShowPopUpDelayed(PopUp popUpPrefab, float delay, Action onShow = null, Action<EPopUpResult> onClose = null)
+        {
+            yield return new WaitForSeconds(delay);
+            
+            var popUp = Instantiate(popUpPrefab, transform);
+
+            if (popUpStack.Count > 0)
+            {
+                popUpStack.Last().Hide();
+            }
+            
+            popUpStack.Add(popUp);
+            
+            popUp.InitDelayedShow(onShow, onClose);
+        }
+
+        private void ClosePopUp(PopUp closePopUp)
+        {
+            if (popUpStack.Count > 0)
+            {
+                popUpStack.Remove(closePopUp);
+
+                if (popUpStack.Count > 0)
+                {
+                    var popUp = popUpStack.Last();
+                    popUp.Show();
+                }
+            }
+
+            if (fader != null && popUpStack.Count == 0 && fader.IsFaded())
+            {
+                fader.FadeOut();
+            }
+        }
+
+        public void CloseAllPopUp()
+        {
+            for (var i = 0; i < popUpStack.Count; i++)
+            {
+                var popUp = popUpStack[i];
+                popUp.Close();
+            }
+            
+            popUpStack.Clear();
+        }
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+    }
+}
+
+
+########################################
+FILE: Assets/Scripts/PopUps/PopUp.cs
+########################################
+
+using System;
+using DG.Tweening;
+using UnityEngine;
+
+[RequireComponent(typeof(CanvasGroup), typeof(Animator))]
+public class PopUp : MonoBehaviour
+{
+     [SerializeField] private float fadeInDuration = 0.1f;
+     [SerializeField] public float apperanceDelay = 0.01f;
+     
+     private const float MINIUM_DELAY = 0.01f;
+     public bool fade = true;
+     public bool instantClose = false;
+     public float FadeInDuration => fadeInDuration;
+     
+     private Animator animator;
+     private CanvasGroup canvasGroup;
+     public CustomButon closeButton;
+
+     public Action OnShowAction;
+     public Action<EPopUpResult> OnCloseAction;
+     protected EPopUpResult result;
+     private Action pendingOnShow;
+     private Action<EPopUpResult> pendingOnClose;
+
+     public delegate void PopUpEvents(PopUp popUp);
+
+     public static event PopUpEvents OnOpenPopup;
+     public static event PopUpEvents OnClosePopup;
+     public static event PopUpEvents OnBeforeCloseAction;
+
+     protected virtual void Awake()
+     {
+          animator = GetComponent<Animator>();
+          canvasGroup = GetComponent<CanvasGroup>();
+
+          if (closeButton != null)
+          {
+               closeButton.onClick.AddListener(Close);
+          }
+     }
+
+     public void DelayedShow()
+     {
+          Show<PopUp>(pendingOnShow, pendingOnClose);
+     }
+
+     public void InitDelayedShow(Action onShow = null, Action<EPopUpResult> onClose = null)
+     {
+          pendingOnShow = onShow;
+          pendingOnClose = onClose;
+
+          bool hasSignificantDelay = apperanceDelay > MINIUM_DELAY;
+
+          if (hasSignificantDelay)
+          {
+               if (canvasGroup != null)
+               {
+                    canvasGroup.alpha = 0;
+                    canvasGroup.interactable = false;
+               }
+               
+               Invoke("DelayedShow", apperanceDelay);
+          }
+          else
+          {
+               DelayedShow();
+          }
+     }
+
+     public void Show<T>(Action onShow = null, Action<EPopUpResult> onClose = null)
+     {
+          if (onShow != null)
+          {
+               OnShowAction = onShow;
+          }
+
+          if (onClose != null)
+          {
+               OnCloseAction = onClose;
+          }
+
+          if (canvasGroup != null)
+          {
+               canvasGroup.alpha = 1;
+               canvasGroup.interactable = true;
+          }
+          
+          OnOpenPopup?.Invoke(this);
+          PlayShowAnimation();
+     }
+
+     private void PlayShowAnimation()
+     {
+          if (animator != null)
+          {
+               animator.Play("popup_show");
+          }
+     }
+
+     public virtual void ShowAnimationSound()
+     {
+          SoundBase.instance.PlaySound(SoundBase.instance.swish[0]);
+     }
+
+     public virtual void AfterShowAnimation()
+     {
+          OnShowAction?.Invoke();
+     }
+
+     public virtual void CloseAnimationSound()
+     {
+          SoundBase.instance.PlayDelayed(SoundBase.instance.swish[1],0.01f);
+     }
+
+     public virtual void Close()
+     {
+          if (this == null) return;
+
+          if (instantClose)
+          {
+               CloseInStant();
+               return;
+          }
+          
+          CancelInvoke();
+
+          if (closeButton)
+          {
+               closeButton.interactable = false;
+          }
+
+          if (canvasGroup != null)
+          {
+               canvasGroup.interactable = false;
+          }
+          
+          OnBeforeCloseAction?.Invoke(this);
+
+          if (animator != null)
+          {
+               animator.Play("popup_hide");
+          }
+     }
+
+     public virtual void AfterHideAnimation()
+     {
+          OnClosePopup?.Invoke(this);
+          OnCloseAction?.Invoke(result);
+          Destroy(gameObject,0.5f);
+     }
+
+     public void Show()
+     {
+          if (canvasGroup != null)
+          {
+               canvasGroup.alpha = 1;
+               canvasGroup.interactable = true;
+          }
+     }
+
+     public virtual void Hide()
+     {
+          if(canvasGroup != null)
+          {
+              canvasGroup.interactable = false;
+              canvasGroup.DOFade(0, 0.5f);
+          }
+     }
+
+     public void CloseDelay()
+     {
+          Invoke(nameof(Close), 0.5f);
+          if (canvasGroup != null)
+          {
+               canvasGroup.interactable = false;
+               canvasGroup.DOFade(0, 0.5f);
+          }
+     }
+
+     protected void StopInteration()
+     {
+          if (canvasGroup != null)
+          {
+               canvasGroup.interactable = false;
+          }
+     }
+
+     public virtual void CloseInStant()
+     {
+          if (this == null) return;
+          
+          CancelInvoke();
+          DOTween.Kill(gameObject);
+
+          if (closeButton)
+          {
+               closeButton.interactable = false;
+          }
+
+          if (canvasGroup != null)
+          {
+               canvasGroup.interactable = false;
+               canvasGroup.alpha = 0;
+          }
+          
+          OnBeforeCloseAction?.Invoke(this);
+          OnClosePopup?.Invoke(this);
+          OnCloseAction?.Invoke(result);
+          Destroy(gameObject);
+     }
+
+     private void OnDisable()
+     {
+          DOTween.Kill(gameObject);
+          CancelInvoke();
+     }
+}
+
+
+
+########################################
+FILE: Assets/Scripts/PopUps/PopUpWithCurrencyLabel.cs
+########################################
+
+using UnityEngine;
+using UnityEngine.SceneManagement;
+
+namespace PopUps
+{
+    public class PopUpWithCurrencyLabel : PopUp
+    {
+        private UIPanel _panel;
+
+        public override void AfterShowAnimation()
+        {
+            base.AfterShowAnimation();
+            
+            _panel = FindObjectOfType<UIPanel>(true);
+            _panel?.gameObject.SetActive(true);
+        }
+
+        public override void Close()
+        {
+            base.Close();
+
+            if (SceneManager.GetActiveScene().name == "Main")
+            {
+                _panel?.gameObject.SetActive(false);
+            }
+        }
+
+        protected void ShowCoinSpendFX(Vector3 position)
+        {
+            SoundBase.instance.PlaySound(SoundBase.instance.coinsSpend);
+            var fx = Instantiate(Resources.Load<GameObject>("FX/CoinSpendFX"), position, Quaternion.identity, transform.parent);
+            fx.transform.localScale = Vector3.one;
+        }
+    }
+}
+
+
+########################################
+FILE: Assets/Scripts/PopUps/UIPanel.cs
+########################################
+
+using UnityEngine;
+
+public class UIPanel : MonoBehaviour
+{
+    
 }
 
 
@@ -1755,6 +3041,125 @@ public class TutorialSetting : ScriptableObject
 
 
 ########################################
+FILE: Assets/Scripts/System/Event.cs
+########################################
+
+namespace System
+{
+    public class Event<T>
+    {
+        private event Action<T> _event;
+        
+        public void Subcribe(Action<T> subcriber)
+        {
+            _event += subcriber;
+        }
+        
+        public void Unsubcribe(Action<T> subcriber)
+        {
+            _event -= subcriber;
+        }
+
+        public void Invoke(T arg)
+        {
+            _event?.Invoke(arg);
+        }
+    }
+}
+
+
+########################################
+FILE: Assets/Scripts/System/EventManager.cs
+########################################
+
+using System.Collections.Generic;
+using UnityEngine;
+using System;
+
+public static class EventManager
+{
+     private static readonly Dictionary<EGameEvent, object> events = new();
+
+     public static Event<T> GetEvent<T>(EGameEvent eventName)
+     {
+          if (events.TryGetValue(eventName, out var e) && e is Event<T> typeEvent)
+          {
+               return typeEvent;
+          }
+          
+          var newEvent = new Event<T>();
+          events[eventName] = newEvent;
+          return newEvent;
+     }
+
+     public static Event GetEvent(EGameEvent eventName)
+     {
+          if (events.TryGetValue(eventName, out var e) && e is Event typeEvent)
+          {
+               return typeEvent;
+          }
+          
+          var newEvent = new Event();
+          events[eventName] = newEvent;
+          return newEvent;
+     }
+
+     public static Dictionary<EGameEvent, object> GetSubcribeEvents()
+     {
+          return events;
+     }
+
+     public static Action<EGameState> OnGameStateChanged;
+     private static EGameState gameStatus;
+
+     public static EGameState GameStatus
+     {
+          get => gameStatus;
+
+          set
+          {
+               gameStatus = value;
+               OnGameStateChanged?.Invoke(gameStatus);
+          }
+     }
+}
+
+public class Event
+{
+     private event Action _event;
+
+     public void Subscribe(Action subscriber)
+     {
+          _event += subscriber;
+     }
+
+     public void Unsubscribe(Action subscriber)
+     {
+          _event -= subscriber;
+     }
+
+     public void Invoke()
+     {
+          _event?.Invoke();
+     }
+}
+
+
+
+########################################
+FILE: Assets/Scripts/System/GameManager.cs
+########################################
+
+using UnityEngine;
+
+public class GameManager : SingletonBehaviour<GameManager>
+{
+     public GameSettings gameSettings;
+}
+
+
+
+########################################
 FILE: Assets/Scripts/System/SingletonBehaviour.cs
 ########################################
 
@@ -1793,6 +3198,94 @@ public class SingletonBehaviour<T> : MonoBehaviour where T : SingletonBehaviour<
                 }
         }
     
+}
+
+
+
+########################################
+FILE: Assets/Scripts/GUI/Labels/Label.cs
+########################################
+
+using System;
+using TMPro;
+using UnityEngine;
+
+public class Label : MonoBehaviour
+{
+    public TextMeshProUGUI label;
+
+    private void Awake()
+    {
+        if (label == null)
+        {
+            label = GetComponent<TextMeshProUGUI>();
+        }
+    }
+}
+
+
+
+########################################
+FILE: Assets/Scripts/GUI/Labels/LabelAnim.cs
+########################################
+
+using DG.Tweening;
+using TMPro;
+using UnityEngine;
+using UnityEngine.UI;
+
+public class LabelAnim : MonoBehaviour
+{
+     public Image icon;
+
+     [SerializeField] private GameObject fxPrefab;
+     [SerializeField] private TextMeshProUGUI coinsTextPrefab;
+     [SerializeField] private ResourceObject asscociatedResource;
+     
+     private Tweener tweener;
+     private Transform _fxParent;
+}
+
+
+
+########################################
+FILE: Assets/Scripts/GUI/Labels/ResourceLabel.cs
+########################################
+
+using UnityEngine;
+
+public class ResourceLabel : MonoBehaviour
+{
+     void Start()
+       {
+       		 
+        }
+
+     void Update()
+       {
+       		 
+        }
+}
+
+
+
+########################################
+FILE: Assets/Scripts/GUI/Labels/TargetScoreGUIElement.cs
+########################################
+
+using UnityEngine;
+
+public class TargetScoreGUIElement : MonoBehaviour
+{
+     void Start()
+       {
+       		 
+        }
+
+     void Update()
+       {
+       		 
+        }
 }
 
 

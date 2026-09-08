@@ -61,21 +61,7 @@ public class Shape : MonoBehaviour
      }
      
      public ShapeData GetShapeData() => currentShapeData;
-
-     public void ApplyPalleteToAllSquares(ColorPallete pallete)
-     {
-          foreach (Transform child in transform)
-          {
-               ShapeSquare shape = child.GetComponent<ShapeSquare>();
-
-               if (shape != null)
-               {
-                    shape.ApplyPallete(pallete);
-               }
-               
-          }
-     }
-
+     
      public List<ShapeSquare> GetActiveSquares()
      {
           List<ShapeSquare> squares = new List<ShapeSquare>();
@@ -91,7 +77,38 @@ public class Shape : MonoBehaviour
           }
           return squares;
      }
+     
+     public void SelectedSquare()
+     {
+          transform.localScale = new Vector3(selectedScale, selectedScale, selectedScale);
+     }
 
+     public void UnSelectedSquare()
+     {
+          transform.localScale = new Vector3(startScale, startScale, startScale);
+          transform.position = initialPosition;
+     }
+
+     public void SnapToPosition(Vector3 position)
+     {
+          transform.position = position;
+     }
+     
+     
+     public void ApplyPalleteToAllSquares(ColorPallete pallete)
+     {
+          foreach (Transform child in transform)
+          {
+               ShapeSquare shape = child.GetComponent<ShapeSquare>();
+
+               if (shape != null)
+               {
+                    shape.ApplyPallete(pallete);
+               }
+               
+          }
+     }
+     
      public void SetAlpha(float alpha)
      {
           foreach (Transform child in transform)
@@ -114,21 +131,5 @@ public class Shape : MonoBehaviour
                if(shapeSquare != null)
                     shapeSquare.AddToOrderInLayer(offset);
           }
-     }
-
-     public void SelectedSquare()
-     {
-          transform.localScale = new Vector3(selectedScale, selectedScale, selectedScale);
-     }
-
-     public void UnSelectedSquare()
-     {
-          transform.localScale = new Vector3(startScale, startScale, startScale);
-          transform.position = initialPosition;
-     }
-
-     public void SnapToPosition(Vector3 position)
-     {
-          transform.position = position;
      }
 }
